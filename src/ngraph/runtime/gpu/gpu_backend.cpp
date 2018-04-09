@@ -31,19 +31,16 @@ std::shared_ptr<ngraph::runtime::CallFrame> runtime::gpu::GPU_Backend::make_call
 }
 
 std::shared_ptr<ngraph::runtime::TensorView>
-    runtime::gpu::GPU_Backend::make_primary_tensor_view(const ngraph::element::Type& element_type,
-                                                        const Shape& shape)
-{
-    auto rc = make_shared<runtime::gpu::GPU_TensorView>(element_type, shape);
-    return dynamic_pointer_cast<runtime::TensorView>(rc);
-}
-
-std::shared_ptr<ngraph::runtime::TensorView>
     runtime::gpu::GPU_Backend::create_tensor(const ngraph::element::Type& element_type,
                                              const Shape& shape)
 {
-    auto rc = make_shared<runtime::gpu::GPU_TensorView>(element_type, shape);
-    return dynamic_pointer_cast<runtime::TensorView>(rc);
+    return make_shared<runtime::gpu::GPU_TensorView>(element_type, shape);
+}
+
+std::shared_ptr<ngraph::runtime::TensorView> runtime::gpu::GPU_Backend::create_tensor(
+    const ngraph::element::Type& element_type, const Shape& shape, void* memory_pointer)
+{
+    return make_shared<runtime::gpu::GPU_TensorView>(element_type, shape, memory_pointer);
 }
 
 bool runtime::gpu::GPU_Backend::compile(const ngraph::Function& func)
@@ -95,11 +92,4 @@ bool runtime::gpu::GPU_Backend::call(
     FunctionInstance& instance = m_function_map.begin()->second;
     instance.m_call_frame->call(outputs, inputs);
     return true;
-}
-
-std::shared_ptr<ngraph::runtime::TensorView> runtime::gpu::GPU_Backend::create_tensor(
-    const ngraph::element::Type& element_type, const Shape& shape, void* memory_pointer)
-{
-    auto rc = make_shared<runtime::gpu::GPU_TensorView>(element_type, shape, memory_pointer);
-    return dynamic_pointer_cast<runtime::TensorView>(rc);
 }

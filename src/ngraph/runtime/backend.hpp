@@ -44,12 +44,6 @@ namespace ngraph
             virtual std::shared_ptr<ngraph::runtime::CallFrame>
                 make_call_frame(const std::shared_ptr<ExternalFunction>& external_function) = 0;
 
-            /// @brief Return a handle for a tensor on the backend device.
-            /// DEPRECATED
-            virtual std::shared_ptr<ngraph::runtime::TensorView>
-                make_primary_tensor_view(const ngraph::element::Type& element_type,
-                                         const Shape& shape) = 0;
-
             /// DEPRECATED
             virtual bool call(const std::vector<std::shared_ptr<runtime::TensorView>>& outputs,
                               const std::vector<std::shared_ptr<runtime::TensorView>>& inputs) = 0;

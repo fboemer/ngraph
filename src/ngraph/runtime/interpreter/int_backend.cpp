@@ -30,27 +30,17 @@ shared_ptr<runtime::CallFrame> runtime::interpreter::INT_Backend::make_call_fram
     return external_function->make_call_frame();
 }
 
-shared_ptr<runtime::TensorView>
-    runtime::interpreter::INT_Backend::make_primary_tensor_view(const element::Type& element_type,
-                                                                const Shape& shape)
+shared_ptr<ngraph::runtime::TensorView>
+    runtime::interpreter::INT_Backend::create_tensor(const ngraph::element::Type& element_type,
+                                                     const Shape& shape)
 {
-    auto rc = make_shared<runtime::HostTensorView>(element_type, shape, "external");
-    return static_pointer_cast<runtime::TensorView>(rc);
+    return make_shared<runtime::HostTensorView>(element_type, shape, "external");
 }
 
 shared_ptr<runtime::TensorView> runtime::interpreter::INT_Backend::create_tensor(
     const element::Type& element_type, const Shape& shape, void* memory_pointer)
 {
-    auto rc = make_shared<runtime::HostTensorView>(element_type, shape, memory_pointer, "external");
-    return static_pointer_cast<runtime::TensorView>(rc);
-}
-
-shared_ptr<ngraph::runtime::TensorView>
-    runtime::interpreter::INT_Backend::create_tensor(const ngraph::element::Type& element_type,
-                                                     const Shape& shape)
-{
-    auto rc = make_shared<runtime::HostTensorView>(element_type, shape, "external");
-    return static_pointer_cast<runtime::TensorView>(rc);
+    return make_shared<runtime::HostTensorView>(element_type, shape, memory_pointer, "external");
 }
 
 bool runtime::interpreter::INT_Backend::compile(const ngraph::Function& func)
