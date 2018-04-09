@@ -594,15 +594,15 @@ TEST(${BACKEND_NAME}, divide_adjoint_stability)
     auto cf = backend->make_call_frame(make_external());
 
     // Create some tensors for input/output
-    auto a = backend->make_primary_tensor_view(element::f32, shape);
+    auto a = backend->create_tensor(element::f32, shape);
     copy_data(a, vector<float>{0, 0, 1, 1});
-    auto b = backend->make_primary_tensor_view(element::f32, shape);
+    auto b = backend->create_tensor(element::f32, shape);
     copy_data(b, vector<float>{2, 2, 2, 2});
-    auto c = backend->make_primary_tensor_view(element::f32, shape);
+    auto c = backend->create_tensor(element::f32, shape);
     copy_data(c, vector<float>{1, 1, 1, 1});
 
-    auto resulta = backend->make_primary_tensor_view(element::f32, shape);
-    auto resultb = backend->make_primary_tensor_view(element::f32, shape);
+    auto resulta = backend->create_tensor(element::f32, shape);
+    auto resultb = backend->create_tensor(element::f32, shape);
 
     cf->call({resulta, resultb}, {a, b, c});
     EXPECT_EQ((vector<float>{0.5, 0.5, 0.5, 0.5}), read_vector<float>(resulta));
@@ -7808,12 +7808,12 @@ TEST(${BACKEND_NAME}, tensorview_custom_mem)
     vector<float> av{2, 4, 8, 16};
     vector<float> bv{1, 2, 4, 8};
     // use custom mem with tensorview, no need to copy data
-    auto a = backend->make_primary_tensor_view(element::f32, shape, av.data());
-    auto b = backend->make_primary_tensor_view(element::f32, shape, bv.data());
+    auto a = backend->create_tensor(element::f32, shape, av.data());
+    auto b = backend->create_tensor(element::f32, shape, bv.data());
 
     // use custom mem with result tensorview
     vector<float> rv{0, 0, 0, 0};
-    auto result = backend->make_primary_tensor_view(element::f32, shape, rv.data());
+    auto result = backend->create_tensor(element::f32, shape, rv.data());
 
     // result should be in memory without needing explict read
     cf->call({result}, {a, b});

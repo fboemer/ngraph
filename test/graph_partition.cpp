@@ -116,7 +116,7 @@ public:
                 {
                     auto result_node = m_map_parameter_to_result.at(parameter_node);
                     auto result_tv = map_node_to_tensor_view.at(result_node);
-                    auto parameter_tv = backend->make_primary_tensor_view(
+                    auto parameter_tv = backend->create_tensor(
                         parameter_node->get_element_type(), parameter_node->get_shape());
                     copy_data(parameter_tv, read_vector<float>(result_tv));
                     map_node_to_tensor_view[parameter_node] = parameter_tv;
@@ -134,7 +134,7 @@ public:
                 }
                 else
                 {
-                    auto result_tv = backend->make_primary_tensor_view(
+                    auto result_tv = backend->create_tensor(
                         result_node->get_element_type(), result_node->get_shape());
                     map_node_to_tensor_view[result_node] = result_tv;
                     result_tvs.push_back(result_tv);
@@ -163,10 +163,10 @@ protected:
 class HybridBackend
 {
 public:
-    shared_ptr<runtime::TensorView> make_primary_tensor_view(const element::Type& element_type,
+    shared_ptr<runtime::TensorView> create_tensor(const element::Type& element_type,
                                                              const Shape& shape)
     {
-        return get_cached_backend("INTERPRETER")->make_primary_tensor_view(element_type, shape);
+        return get_cached_backend("INTERPRETER")->create_tensor(element_type, shape);
     }
 
     // Returns CallFrame directly, simplifies calling process
@@ -324,11 +324,11 @@ TEST(graph_partition, hybrid_abc_manual)
     auto cpu_backend = cpu_manager->allocate_backend();
 
     // f0 on INT
-    auto a = int_backend->make_primary_tensor_view(element::f32, shape);
-    auto b = int_backend->make_primary_tensor_view(element::f32, shape);
-    auto c = int_backend->make_primary_tensor_view(element::f32, shape);
-    auto r0 = int_backend->make_primary_tensor_view(element::f32, shape);
-    auto r1 = int_backend->make_primary_tensor_view(element::f32, shape);
+    auto a = int_backend->create_tensor(element::f32, shape);
+    auto b = int_backend->create_tensor(element::f32, shape);
+    auto c = int_backend->create_tensor(element::f32, shape);
+    auto r0 = int_backend->create_tensor(element::f32, shape);
+    auto r1 = int_backend->create_tensor(element::f32, shape);
     copy_data(a, test::NDArray<float, 2>({{1, 2}, {3, 4}}).get_vector());
     copy_data(b, test::NDArray<float, 2>({{5, 6}, {7, 8}}).get_vector());
     copy_data(c, test::NDArray<float, 2>({{9, 10}, {11, 12}}).get_vector());
@@ -339,9 +339,9 @@ TEST(graph_partition, hybrid_abc_manual)
     f0_call_frame->call({r0, r1}, {a, b, c});
 
     // f1 on CPU
-    auto p0 = cpu_backend->make_primary_tensor_view(element::f32, shape);
-    auto p1 = cpu_backend->make_primary_tensor_view(element::f32, shape);
-    auto r2 = cpu_backend->make_primary_tensor_view(element::f32, shape);
+    auto p0 = cpu_backend->create_tensor(element::f32, shape);
+    auto p1 = cpu_backend->create_tensor(element::f32, shape);
+    auto r2 = cpu_backend->create_tensor(element::f32, shape);
     copy_data(p0, read_vector<float>(r0));
     copy_data(p1, read_vector<float>(r1));
 
@@ -351,8 +351,8 @@ TEST(graph_partition, hybrid_abc_manual)
     f1_call_frame->call({r2}, {p0, p1});
 
     // f2 on INT
-    auto p2 = int_backend->make_primary_tensor_view(element::f32, shape);
-    auto r = int_backend->make_primary_tensor_view(element::f32, shape);
+    auto p2 = int_backend->create_tensor(element::f32, shape);
+    auto r = int_backend->create_tensor(element::f32, shape);
     copy_data(p2, read_vector<float>(r2));
 
     auto f2 = make_shared<Function>(ResultVector{R}, op::ParameterVector{P2});
@@ -401,10 +401,10 @@ TEST(graph_partition, hybrid_abc)
     auto backend = make_shared<HybridBackend>();
     auto cf = backend->compile(f);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> c = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> r = backend->make_primary_tensor_view(element::f32, shape);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> c = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> r = backend->create_tensor(element::f32, shape);
 
     copy_data(a, test::NDArray<float, 2>({{1, 2}, {3, 4}}).get_vector());
     copy_data(b, test::NDArray<float, 2>({{5, 6}, {7, 8}}).get_vector());
@@ -442,11 +442,11 @@ TEST(graph_partition, hybrid_abcd)
     auto backend = make_shared<HybridBackend>();
     auto cf = backend->compile(f);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> c = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> d = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> r = backend->make_primary_tensor_view(element::f32, shape);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> c = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> d = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> r = backend->create_tensor(element::f32, shape);
 
     copy_data(a, test::NDArray<float, 2>({{1, 2}, {3, 4}}).get_vector());
     copy_data(b, test::NDArray<float, 2>({{5, 6}, {7, 8}}).get_vector());
@@ -482,10 +482,10 @@ TEST(graph_partition, hybrid_back_and_forth)
     auto backend = make_shared<HybridBackend>();
     auto cf = backend->compile(f);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> c = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> r = backend->make_primary_tensor_view(element::f32, shape);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> c = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> r = backend->create_tensor(element::f32, shape);
 
     copy_data(a, test::NDArray<float, 2>({{1, 2}, {3, 4}}).get_vector());
     copy_data(b, test::NDArray<float, 2>({{5, 6}, {7, 8}}).get_vector());
@@ -523,10 +523,10 @@ TEST(graph_partition, hybrid_multi_middle_nodes)
     auto backend = make_shared<HybridBackend>();
     auto cf = backend->compile(f);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> c = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> r = backend->make_primary_tensor_view(element::f32, shape);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> c = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> r = backend->create_tensor(element::f32, shape);
 
     copy_data(a, test::NDArray<float, 2>({{1, 2}, {3, 4}}).get_vector());
     copy_data(b, test::NDArray<float, 2>({{5, 6}, {7, 8}}).get_vector());
@@ -555,9 +555,9 @@ TEST(graph_partition, hybrid_no_split)
     auto backend = make_shared<HybridBackend>();
     auto cf = backend->compile(f);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shape);
-    shared_ptr<runtime::TensorView> c = backend->make_primary_tensor_view(element::f32, shape);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shape);
+    shared_ptr<runtime::TensorView> c = backend->create_tensor(element::f32, shape);
 
     copy_data(a, test::NDArray<float, 2>({{1, 2}, {3, 4}}).get_vector());
     copy_data(b, test::NDArray<float, 2>({{5, 6}, {7, 8}}).get_vector());

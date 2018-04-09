@@ -88,13 +88,13 @@ TEST(serialize, main)
     auto backend = manager->allocate_backend();
     auto cf = backend->make_call_frame(external);
 
-    auto x = backend->make_primary_tensor_view(element::f32, shape);
+    auto x = backend->create_tensor(element::f32, shape);
     copy_data(x, vector<float>{1, 2, 3, 4});
-    auto y = backend->make_primary_tensor_view(element::f32, shape);
+    auto y = backend->create_tensor(element::f32, shape);
     copy_data(y, vector<float>{5, 6, 7, 8});
-    auto z = backend->make_primary_tensor_view(element::f32, shape);
+    auto z = backend->create_tensor(element::f32, shape);
     copy_data(z, vector<float>{9, 10, 11, 12});
-    auto result = backend->make_primary_tensor_view(element::f32, shape);
+    auto result = backend->create_tensor(element::f32, shape);
 
     cf->call({result}, {x, y, z});
     EXPECT_EQ((vector<float>{216, 320, 440, 576}), read_vector<float>(result));

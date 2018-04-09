@@ -127,10 +127,10 @@ TEST(cpu_fusion, gemm_cpu_broadcast_row)
     auto backend = manager->allocate_backend();
     auto cf = backend->make_call_frame(external);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shapeA);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shapeB);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shapeA);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shapeB);
     shared_ptr<runtime::TensorView> result =
-        backend->make_primary_tensor_view(element::f32, shapeC);
+        backend->create_tensor(element::f32, shapeC);
 
     vector<float> dataA{1.0f, 4.0f, 1.0f, 4.0f, 1.0f, 4.0f};
     vector<float> dataB{3.0f, 3.0f, 3.0f, 9.0f, 9.0f, 9.0f};
@@ -162,10 +162,10 @@ TEST(cpu_fusion, gemm_cpu_broadcast_column)
     auto backend = manager->allocate_backend();
     auto cf = backend->make_call_frame(external);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shapeA);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shapeB);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shapeA);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shapeB);
     shared_ptr<runtime::TensorView> result =
-        backend->make_primary_tensor_view(element::f32, shapeC);
+        backend->create_tensor(element::f32, shapeC);
 
     vector<float> dataA{1.0f, 4.0f, 1.0f, 4.0f, 1.0f, 4.0f};
     vector<float> dataB{3.0f, 3.0f, 3.0f, 9.0f, 9.0f, 9.0f};
@@ -201,10 +201,10 @@ TEST(cpu_fusion, gemm_cpu_broadcast_matrix)
     auto backend = manager->allocate_backend();
     auto cf = backend->make_call_frame(external);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shapeA);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shapeB);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shapeA);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shapeB);
     shared_ptr<runtime::TensorView> result =
-        backend->make_primary_tensor_view(element::f32, shapeC);
+        backend->create_tensor(element::f32, shapeC);
 
     vector<float> dataA{1.0f, 4.0f, 1.0f, 4.0f, 1.0f, 4.0f};
     vector<float> dataB{3.0f, 3.0f, 3.0f, 9.0f, 9.0f, 9.0f};
@@ -237,10 +237,10 @@ TEST(cpu_fusion, gemm_cpu_no_bias)
     auto backend = manager->allocate_backend();
     auto cf = backend->make_call_frame(external);
 
-    shared_ptr<runtime::TensorView> a = backend->make_primary_tensor_view(element::f32, shapeA);
-    shared_ptr<runtime::TensorView> b = backend->make_primary_tensor_view(element::f32, shapeB);
+    shared_ptr<runtime::TensorView> a = backend->create_tensor(element::f32, shapeA);
+    shared_ptr<runtime::TensorView> b = backend->create_tensor(element::f32, shapeB);
     shared_ptr<runtime::TensorView> result =
-        backend->make_primary_tensor_view(element::f32, shapeC);
+        backend->create_tensor(element::f32, shapeC);
 
     vector<float> dataA{1.0f, 4.0f, 1.0f, 4.0f, 1.0f, 4.0f};
     vector<float> dataB{3.0f, 3.0f, 3.0f, 9.0f, 9.0f, 9.0f};
@@ -551,7 +551,7 @@ struct ConvolutionBiasTestData
         bias = make_shared<op::Parameter>(element::f32, bias_shape);
         result_shape = Shape{n, filter, 1, 1};
 
-        data_val = backend->make_primary_tensor_view(element::f32, data_shape);
+        data_val = backend->create_tensor(element::f32, data_shape);
         copy_data(data_val,
                   vector<float>{-0.67765152f,
                                 0.10073948f,
@@ -562,7 +562,7 @@ struct ConvolutionBiasTestData
                                 -0.80642909f,
                                 1.22033095f,
                                 2.23235631f});
-        weights_val = backend->make_primary_tensor_view(element::f32, weights_shape);
+        weights_val = backend->create_tensor(element::f32, weights_shape);
         copy_data(weights_val,
                   vector<float>{0.20070229f,
                                 -0.54968649f,
@@ -573,23 +573,23 @@ struct ConvolutionBiasTestData
                                 0.14867957f,
                                 -0.49851316f,
                                 -0.84815776f});
-        bias_val = backend->make_primary_tensor_view(element::f32, bias_shape);
+        bias_val = backend->create_tensor(element::f32, bias_shape);
         copy_data(bias_val, vector<float>{0.07811152f});
 
-        result_val = backend->make_primary_tensor_view(element::f32, result_shape);
+        result_val = backend->create_tensor(element::f32, result_shape);
         copy_data(result_val, vector<float>{0});
 
         delta = make_shared<op::Parameter>(element::f32, result_shape);
-        delta_val = backend->make_primary_tensor_view(element::f32, result_shape);
+        delta_val = backend->create_tensor(element::f32, result_shape);
         copy_data(delta_val, vector<float>{-2.58936238f});
 
-        d_data_val = backend->make_primary_tensor_view(element::f32, data_shape);
+        d_data_val = backend->create_tensor(element::f32, data_shape);
         copy_data(d_data_val, vector<float>{0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-        d_weights_val = backend->make_primary_tensor_view(element::f32, weights_shape);
+        d_weights_val = backend->create_tensor(element::f32, weights_shape);
         copy_data(d_weights_val, vector<float>{0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-        d_bias_val = backend->make_primary_tensor_view(element::f32, bias_shape);
+        d_bias_val = backend->create_tensor(element::f32, bias_shape);
         copy_data(d_bias_val, vector<float>{0});
 
         expected_result_val = vector<float>{-2.58936238f};
@@ -702,9 +702,9 @@ TEST(cpu_fusion, sigmoid_n1c1h2w2)
     auto cf = backend->make_call_frame(external);
 
     shared_ptr<runtime::TensorView> a =
-        backend->make_primary_tensor_view(element::f32, input->get_shape());
+        backend->create_tensor(element::f32, input->get_shape());
     shared_ptr<runtime::TensorView> result =
-        backend->make_primary_tensor_view(element::f32, input->get_shape());
+        backend->create_tensor(element::f32, input->get_shape());
 
     vector<float> dataA{1.0f, 4.0f, 1.0f, 4.0f};
     copy_data(a, dataA);
@@ -726,9 +726,9 @@ TEST(cpu_fusion, sigmoid_n1c1h4)
     auto cf = backend->make_call_frame(external);
 
     shared_ptr<runtime::TensorView> a =
-        backend->make_primary_tensor_view(element::f32, input->get_shape());
+        backend->create_tensor(element::f32, input->get_shape());
     shared_ptr<runtime::TensorView> result =
-        backend->make_primary_tensor_view(element::f32, input->get_shape());
+        backend->create_tensor(element::f32, input->get_shape());
 
     vector<float> dataA{1.0f, 4.0f, 1.0f, 4.0f};
     copy_data(a, dataA);
@@ -765,11 +765,11 @@ TEST(cpu_fusion, sigmoid_bprop_n1c1h4)
     auto cf = backend->make_call_frame(external);
 
     shared_ptr<runtime::TensorView> a =
-        backend->make_primary_tensor_view(element::f32, input->get_shape());
+        backend->create_tensor(element::f32, input->get_shape());
     shared_ptr<runtime::TensorView> b =
-        backend->make_primary_tensor_view(element::f32, delta->get_shape());
+        backend->create_tensor(element::f32, delta->get_shape());
     shared_ptr<runtime::TensorView> result =
-        backend->make_primary_tensor_view(element::f32, input->get_shape());
+        backend->create_tensor(element::f32, input->get_shape());
 
     vector<float> dataA{1.0f, 4.0f, 1.0f, 4.0f};
     vector<float> dataB{1.0f, 1.0f, 1.0f, 1.0f};
@@ -822,7 +822,7 @@ TEST(cpu_fusion, batchnorm_fprop_relu_b1c2h2w2)
     auto cf = backend->make_call_frame(external);
 
     // Create some tensors for input/output
-    auto input_t = backend->make_primary_tensor_view(element::f32, Shape{1, 2, 2, 2});
+    auto input_t = backend->create_tensor(element::f32, Shape{1, 2, 2, 2});
 
     copy_data(input_t,
               vector<float>{0.54881352f,
@@ -833,17 +833,17 @@ TEST(cpu_fusion, batchnorm_fprop_relu_b1c2h2w2)
                             0.64589411f,
                             0.4375872f,
                             0.89177299f});
-    auto gamma_t = backend->make_primary_tensor_view(element::f32, gamma_shape);
+    auto gamma_t = backend->create_tensor(element::f32, gamma_shape);
     copy_data(gamma_t, vector<float>{1.0f, 1.0f});
-    auto beta_t = backend->make_primary_tensor_view(element::f32, beta_shape);
+    auto beta_t = backend->create_tensor(element::f32, beta_shape);
     copy_data(beta_t, vector<float>{0.0f, 0.0f});
-    auto bn_output = backend->make_primary_tensor_view(element::f32, shape_r);
-    auto result_mean = backend->make_primary_tensor_view(element::f32, mean_shape);
-    auto result_variance = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto bn_output = backend->create_tensor(element::f32, shape_r);
+    auto result_mean = backend->create_tensor(element::f32, mean_shape);
+    auto result_variance = backend->create_tensor(element::f32, var_shape);
 
-    auto bn_output_bnr = backend->make_primary_tensor_view(element::f32, shape_r);
-    auto result_mean_bnr = backend->make_primary_tensor_view(element::f32, mean_shape);
-    auto result_variance_bnr = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto bn_output_bnr = backend->create_tensor(element::f32, shape_r);
+    auto result_mean_bnr = backend->create_tensor(element::f32, mean_shape);
+    auto result_variance_bnr = backend->create_tensor(element::f32, var_shape);
 
     cf->call({bn_output,
               result_mean,
@@ -896,7 +896,7 @@ static std::vector<std::vector<T>>
     std::vector<std::shared_ptr<ngraph::runtime::TensorView>> arg_tensors(args.size());
     for (size_t i = 0; i < args.size(); i++)
     {
-        auto t = backend->make_primary_tensor_view(parms.at(i)->get_element_type(),
+        auto t = backend->create_tensor(parms.at(i)->get_element_type(),
                                                    parms.at(i)->get_shape());
         copy_data(t, args.at(i));
         arg_tensors.at(i) = t;
@@ -907,7 +907,7 @@ static std::vector<std::vector<T>>
 
     for (size_t i = 0; i < results.size(); i++)
     {
-        result_tensors.at(i) = backend->make_primary_tensor_view(results.at(i)->get_element_type(),
+        result_tensors.at(i) = backend->create_tensor(results.at(i)->get_element_type(),
                                                                  results.at(i)->get_shape());
     }
 
@@ -1010,16 +1010,16 @@ std::vector<shared_ptr<runtime::TensorView>>
     auto cf = backend->make_call_frame(external);
 
     shared_ptr<runtime::TensorView> data_tensor =
-        backend->make_primary_tensor_view(element::f32, data->get_shape());
+        backend->create_tensor(element::f32, data->get_shape());
     shared_ptr<runtime::TensorView> weights_tensor =
-        backend->make_primary_tensor_view(element::f32, weights->get_shape());
+        backend->create_tensor(element::f32, weights->get_shape());
     shared_ptr<runtime::TensorView> bias_tensor =
-        backend->make_primary_tensor_view(element::f32, bias->get_shape());
+        backend->create_tensor(element::f32, bias->get_shape());
 
     std::vector<shared_ptr<runtime::TensorView>> result_tensors;
     for (auto r : results)
     {
-        result_tensors.push_back(backend->make_primary_tensor_view(element::f32, r->get_shape()));
+        result_tensors.push_back(backend->create_tensor(element::f32, r->get_shape()));
     }
 
     copy_data(data_tensor, data_val);

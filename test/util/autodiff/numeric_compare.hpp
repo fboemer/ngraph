@@ -40,7 +40,7 @@ bool autodiff_numeric_compare(const std::shared_ptr<ngraph::runtime::Manager>& m
     std::vector<std::shared_ptr<ngraph::runtime::TensorView>> interpreter_args;
     for (auto arg : args)
     {
-        auto interpreter_arg = interpreter_backend->make_primary_tensor_view(
+        auto interpreter_arg = interpreter_backend->create_tensor(
             arg->get_tensor().get_element_type(), arg->get_shape());
 
         // TODO: copy_data should not require T. Quick fix here for bool used in `Select`
@@ -66,7 +66,7 @@ bool autodiff_numeric_compare(const std::shared_ptr<ngraph::runtime::Manager>& m
     std::vector<std::shared_ptr<ngraph::runtime::TensorView>> interpreter_results_sym;
     for (auto result : results_sym)
     {
-        auto interpreter_result = interpreter_backend->make_primary_tensor_view(
+        auto interpreter_result = interpreter_backend->create_tensor(
             ngraph::element::from<T>(), result->get_shape());
         copy_data(interpreter_result, read_vector<T>(result));
         interpreter_results_sym.push_back(interpreter_result);
@@ -106,7 +106,7 @@ bool autodiff_numeric_compare_selective(
     std::vector<std::shared_ptr<ngraph::runtime::TensorView>> interpreter_args;
     for (auto arg : args)
     {
-        auto interpreter_arg = interpreter_backend->make_primary_tensor_view(
+        auto interpreter_arg = interpreter_backend->create_tensor(
             arg->get_tensor().get_element_type(), arg->get_shape());
 
         // TODO: copy_data should not require T. Quick fix here for bool used in `Select`
@@ -145,7 +145,7 @@ bool autodiff_numeric_compare_selective(
     std::vector<std::shared_ptr<ngraph::runtime::TensorView>> interpreter_results_sym;
     for (auto result : results_sym)
     {
-        auto interpreter_result = interpreter_backend->make_primary_tensor_view(
+        auto interpreter_result = interpreter_backend->create_tensor(
             ngraph::element::from<T>(), result->get_shape());
         copy_data(interpreter_result, read_vector<T>(result));
         interpreter_results_sym.push_back(interpreter_result);

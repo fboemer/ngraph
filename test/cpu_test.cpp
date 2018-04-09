@@ -71,7 +71,7 @@ TEST(cpu_test, batchnorm_fprop_b1c2h2w2)
     auto cf = backend->make_call_frame(external);
 
     // Create some tensors for input/output
-    auto _input = backend->make_primary_tensor_view(element::f32, Shape{1, 2, 2, 2});
+    auto _input = backend->create_tensor(element::f32, Shape{1, 2, 2, 2});
 
     copy_data(_input,
               vector<float>{0.54881352f,
@@ -82,13 +82,13 @@ TEST(cpu_test, batchnorm_fprop_b1c2h2w2)
                             0.64589411f,
                             0.4375872f,
                             0.89177299f});
-    auto _gamma = backend->make_primary_tensor_view(element::f32, gamma_shape);
+    auto _gamma = backend->create_tensor(element::f32, gamma_shape);
     copy_data(_gamma, vector<float>{1.0f, 1.0f});
-    auto _beta = backend->make_primary_tensor_view(element::f32, beta_shape);
+    auto _beta = backend->create_tensor(element::f32, beta_shape);
     copy_data(_beta, vector<float>{0.0f, 0.0f});
-    auto bn_output = backend->make_primary_tensor_view(element::f32, shape_r);
-    auto result_mean = backend->make_primary_tensor_view(element::f32, mean_shape);
-    auto result_variance = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto bn_output = backend->create_tensor(element::f32, shape_r);
+    auto result_mean = backend->create_tensor(element::f32, mean_shape);
+    auto result_variance = backend->create_tensor(element::f32, var_shape);
 
     vector<float> expected_result{-0.71498716f,
                                   1.48388731f,
@@ -133,7 +133,7 @@ TEST(cpu_test, batchnorm_fprop_b2c2h2w1)
     auto backend = manager->allocate_backend();
     auto cf = backend->make_call_frame(external);
     // Create some tensors for input/output
-    auto _input = backend->make_primary_tensor_view(element::f32, Shape{2, 2, 2, 1});
+    auto _input = backend->create_tensor(element::f32, Shape{2, 2, 2, 1});
     copy_data(_input,
               vector<float>{0.54881352f,
                             0.71518934f,
@@ -144,13 +144,13 @@ TEST(cpu_test, batchnorm_fprop_b2c2h2w1)
                             0.4375872f,
                             0.89177299f});
 
-    auto _gamma = backend->make_primary_tensor_view(element::f32, gamma_shape);
+    auto _gamma = backend->create_tensor(element::f32, gamma_shape);
     copy_data(_gamma, vector<float>{1.0f, 1.0f});
-    auto _beta = backend->make_primary_tensor_view(element::f32, beta_shape);
+    auto _beta = backend->create_tensor(element::f32, beta_shape);
     copy_data(_beta, vector<float>{0.0f, 0.0f});
-    auto bn_output = backend->make_primary_tensor_view(element::f32, shape_r);
-    auto result_mean = backend->make_primary_tensor_view(element::f32, mean_shape);
-    auto result_variance = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto bn_output = backend->create_tensor(element::f32, shape_r);
+    auto result_mean = backend->create_tensor(element::f32, mean_shape);
+    auto result_variance = backend->create_tensor(element::f32, var_shape);
 
     vector<float> expected_result{
         -0.30327f, 1.1561f, -0.0963782f, -0.434702f, -1.4011f, 0.548275f, -1.06187f, 1.59295f};
@@ -206,7 +206,7 @@ TEST(cpu_test, bn_bprop_n4c3h2w2)
     auto manager = runtime::Manager::get("CPU");
     auto backend = manager->allocate_backend();
 
-    auto _input = backend->make_primary_tensor_view(element::f32, input_shape);
+    auto _input = backend->create_tensor(element::f32, input_shape);
     vector<float> dataInput{
         10.76331902f, 11.51178265f, 10.31018162f, 12.2993021f,  14.17626667f, 14.63498497f,
         13.63494492f, 13.84248161f, 11.34602547f, 13.22014618f, 10.46686649f, 10.39842987f,
@@ -217,19 +217,19 @@ TEST(cpu_test, bn_bprop_n4c3h2w2)
         12.62048626f, 14.47942352f, 13.84950638f, 10.61425877f, 11.47936344f, 13.06011772f,
         13.63069057f, 12.31748772f, 13.84555244f, 10.95815468f, 12.78933334f, 12.75389099f};
     copy_data(_input, dataInput);
-    auto _mean = backend->make_primary_tensor_view(element::f32, mean_shape);
+    auto _mean = backend->create_tensor(element::f32, mean_shape);
     copy_data(_mean, vector<float>{12.56472874f, 12.80312157f, 11.81676865f});
-    auto _var = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto _var = backend->create_tensor(element::f32, var_shape);
     copy_data(_var, vector<float>{1.94557643f, 1.32772446f, 1.28163588f});
 
-    auto _gamma = backend->make_primary_tensor_view(element::f32, gamma_shape);
+    auto _gamma = backend->create_tensor(element::f32, gamma_shape);
     copy_data(_gamma, vector<float>{2.0f, 2.0f, 2.0f});
-    auto _beta = backend->make_primary_tensor_view(element::f32, beta_shape);
+    auto _beta = backend->create_tensor(element::f32, beta_shape);
     copy_data(_beta, vector<float>{1.0f, 1.0f, 1.0f});
-    auto result = backend->make_primary_tensor_view(element::f32, shape_r);
+    auto result = backend->create_tensor(element::f32, shape_r);
 
     shared_ptr<runtime::TensorView> _delta =
-        backend->make_primary_tensor_view(element::f32, shape_r);
+        backend->create_tensor(element::f32, shape_r);
     vector<float> deltaData(shape_size(shape_r), 20.0f);
     copy_data(_delta, deltaData);
 
@@ -258,11 +258,11 @@ TEST(cpu_test, bn_bprop_n4c3h2w2)
     auto cf = backend->make_call_frame(external);
 
     shared_ptr<runtime::TensorView> _dinput =
-        backend->make_primary_tensor_view(element::f32, shape_r);
+        backend->create_tensor(element::f32, shape_r);
     shared_ptr<runtime::TensorView> _dgamma =
-        backend->make_primary_tensor_view(element::f32, gamma_shape);
+        backend->create_tensor(element::f32, gamma_shape);
     shared_ptr<runtime::TensorView> _dbeta =
-        backend->make_primary_tensor_view(element::f32, beta_shape);
+        backend->create_tensor(element::f32, beta_shape);
 
     cf->call({_dinput, _dgamma, _dbeta}, {_mean, _var, _input, _gamma, _beta, _delta});
 
@@ -308,7 +308,7 @@ TEST(cpu_test, batchnorm_fprop_inference_b2c2h2w1)
     auto backend = manager->allocate_backend();
     auto cf = backend->make_call_frame(external);
     // Create some tensors for input/output
-    auto _input = backend->make_primary_tensor_view(element::f32, Shape{2, 2, 2, 1});
+    auto _input = backend->create_tensor(element::f32, Shape{2, 2, 2, 1});
     copy_data(_input,
               vector<float>{0.54881352f,
                             0.71518934f,
@@ -319,17 +319,17 @@ TEST(cpu_test, batchnorm_fprop_inference_b2c2h2w1)
                             0.4375872f,
                             0.89177299f});
 
-    auto _gamma = backend->make_primary_tensor_view(element::f32, gamma_shape);
+    auto _gamma = backend->create_tensor(element::f32, gamma_shape);
     copy_data(_gamma, vector<float>{1.0f, 1.0f});
-    auto _beta = backend->make_primary_tensor_view(element::f32, beta_shape);
+    auto _beta = backend->create_tensor(element::f32, beta_shape);
     copy_data(_beta, vector<float>{0.0f, 0.0f});
-    auto _mean = backend->make_primary_tensor_view(element::f32, mean_shape);
+    auto _mean = backend->create_tensor(element::f32, mean_shape);
     copy_data(_mean, vector<float>{0.583388f, 0.619252f});
-    auto _var = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto _var = backend->create_tensor(element::f32, var_shape);
     copy_data(_var, vector<float>{0.0119972f, 0.0282681f});
-    auto bn_output = backend->make_primary_tensor_view(element::f32, shape_r);
-    auto result_mean = backend->make_primary_tensor_view(element::f32, mean_shape);
-    auto result_variance = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto bn_output = backend->create_tensor(element::f32, shape_r);
+    auto result_mean = backend->create_tensor(element::f32, mean_shape);
+    auto result_variance = backend->create_tensor(element::f32, var_shape);
     vector<float> expected_result{
         -0.30327f, 1.1561f, -0.0963782f, -0.434702f, -1.4011f, 0.548275f, -1.06187f, 1.59295f};
     cf->call({bn_output}, {_input, _gamma, _beta, _mean, _var});
@@ -360,7 +360,7 @@ TEST(cpu_test, batchnorm_fprop_globalstats_b2c2w2h1)
     auto backend = manager->allocate_backend();
     auto cf = backend->make_call_frame(external);
     // Create some tensors for input/output
-    auto _input = backend->make_primary_tensor_view(element::f32, Shape{2, 2, 2, 1});
+    auto _input = backend->create_tensor(element::f32, Shape{2, 2, 2, 1});
     copy_data(_input,
               vector<float>{0.54881352f,
                             0.71518934f,
@@ -371,17 +371,17 @@ TEST(cpu_test, batchnorm_fprop_globalstats_b2c2w2h1)
                             0.4375872f,
                             0.89177299f});
 
-    auto _gamma = backend->make_primary_tensor_view(element::f32, gamma_shape);
+    auto _gamma = backend->create_tensor(element::f32, gamma_shape);
     copy_data(_gamma, vector<float>{1.0f, 1.0f});
-    auto _beta = backend->make_primary_tensor_view(element::f32, beta_shape);
+    auto _beta = backend->create_tensor(element::f32, beta_shape);
     copy_data(_beta, vector<float>{0.0f, 0.0f});
-    auto _mean = backend->make_primary_tensor_view(element::f32, mean_shape);
+    auto _mean = backend->create_tensor(element::f32, mean_shape);
     copy_data(_mean, vector<float>{0.583388f, 0.619252f});
-    auto _var = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto _var = backend->create_tensor(element::f32, var_shape);
     copy_data(_var, vector<float>{0.0119972f, 0.0282681f});
-    auto bn_output = backend->make_primary_tensor_view(element::f32, shape_r);
-    auto result_mean = backend->make_primary_tensor_view(element::f32, mean_shape);
-    auto result_variance = backend->make_primary_tensor_view(element::f32, var_shape);
+    auto bn_output = backend->create_tensor(element::f32, shape_r);
+    auto result_mean = backend->create_tensor(element::f32, mean_shape);
+    auto result_variance = backend->create_tensor(element::f32, var_shape);
     vector<float> expected_result{
         -0.30327f, 1.1561f, -0.0963782f, -0.434702f, -1.4011f, 0.548275f, -1.06187f, 1.59295f};
     cf->call({bn_output}, {_gamma, _beta, _input, _mean, _var});

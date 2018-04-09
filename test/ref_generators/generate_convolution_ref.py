@@ -233,11 +233,11 @@ TEST (${BACKEND_NAME}, %s)
     auto cf = backend->make_call_frame(external);
 
     // Create some tensors for input/output
-    auto a = backend->make_primary_tensor_view(element::f32, shape_a);
+    auto a = backend->create_tensor(element::f32, shape_a);
     copy_data(a, vector<float>{%s});
-    auto b = backend->make_primary_tensor_view(element::f32, shape_b);
+    auto b = backend->create_tensor(element::f32, shape_b);
     copy_data(b, vector<float>{%s});
-    auto result = backend->make_primary_tensor_view(element::f32, shape_r);
+    auto result = backend->create_tensor(element::f32, shape_r);
 
     vector<float> expected_result{%s};
 

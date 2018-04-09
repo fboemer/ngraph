@@ -44,11 +44,11 @@ TEST(INTERPRETER, nan_check_input)
         static_pointer_cast<runtime::interpreter::INT_CallFrame>(cf);
 
     // Create some tensors for input/output
-    auto a = backend->make_primary_tensor_view(element::f32, shape);
+    auto a = backend->create_tensor(element::f32, shape);
     copy_data(a, vector<float>{2, 4, NAN, 16});
-    auto b = backend->make_primary_tensor_view(element::f32, shape);
+    auto b = backend->create_tensor(element::f32, shape);
     copy_data(b, vector<float>{1, 2, 1, 8});
-    auto result = backend->make_primary_tensor_view(element::f32, shape);
+    auto result = backend->create_tensor(element::f32, shape);
 
     icf->set_nan_check(true);
     EXPECT_ANY_THROW(icf->call({result}, {a, b}));
@@ -70,11 +70,11 @@ TEST(INTERPRETER, nan_check_output)
         static_pointer_cast<runtime::interpreter::INT_CallFrame>(cf);
 
     // Create some tensors for input/output
-    auto a = backend->make_primary_tensor_view(element::f32, shape);
+    auto a = backend->create_tensor(element::f32, shape);
     copy_data(a, vector<float>{2, 4, 0, 16});
-    auto b = backend->make_primary_tensor_view(element::f32, shape);
+    auto b = backend->create_tensor(element::f32, shape);
     copy_data(b, vector<float>{1, 2, 0, 8});
-    auto result = backend->make_primary_tensor_view(element::f32, shape);
+    auto result = backend->create_tensor(element::f32, shape);
 
     icf->set_nan_check(true);
     EXPECT_ANY_THROW(icf->call({result}, {a, b}));

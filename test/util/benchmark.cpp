@@ -213,14 +213,14 @@ void run_benchmark(shared_ptr<Function> f,
     for (shared_ptr<op::Parameter> param : f->get_parameters())
     {
         auto tensor =
-            backend->make_primary_tensor_view(param->get_element_type(), param->get_shape());
+            backend->create_tensor(param->get_element_type(), param->get_shape());
         random_init(tensor);
         args.push_back(tensor);
     }
     vector<shared_ptr<runtime::TensorView>> results;
     for (shared_ptr<Node> out : f->get_results())
     {
-        auto result = backend->make_primary_tensor_view(out->get_element_type(), out->get_shape());
+        auto result = backend->create_tensor(out->get_element_type(), out->get_shape());
         results.push_back(result);
     }
 
