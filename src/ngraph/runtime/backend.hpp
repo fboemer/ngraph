@@ -51,14 +51,6 @@ namespace ngraph
                                          const Shape& shape) = 0;
 
             /// DEPRECATED
-            template <typename T>
-            std::shared_ptr<ngraph::runtime::TensorView>
-                make_primary_tensor_view(const Shape& shape)
-            {
-                return make_primary_tensor_view(element::from<T>(), shape);
-            }
-
-            /// DEPRECATED
             virtual bool call(const std::vector<std::shared_ptr<runtime::TensorView>>& outputs,
                               const std::vector<std::shared_ptr<runtime::TensorView>>& inputs) = 0;
 
