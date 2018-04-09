@@ -44,10 +44,6 @@ namespace ngraph
             virtual std::shared_ptr<ngraph::runtime::CallFrame>
                 make_call_frame(const std::shared_ptr<ExternalFunction>& external_function) = 0;
 
-            /// DEPRECATED
-            virtual bool call(const std::vector<std::shared_ptr<runtime::TensorView>>& outputs,
-                              const std::vector<std::shared_ptr<runtime::TensorView>>& inputs) = 0;
-
             /// @brief Create a new Backend object
             /// @param type The name of a registered backend, such as "CPU" or "GPU".
             ///   To select a subdevice use "GPU:N" where s`N` is the subdevice number.

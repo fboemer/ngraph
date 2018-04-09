@@ -80,15 +80,3 @@ bool runtime::interpreter::INT_Backend::call(const Function& fun,
 
     return rc;
 }
-
-bool runtime::interpreter::INT_Backend::call(const vector<shared_ptr<runtime::TensorView>>& outputs,
-                                             const vector<shared_ptr<runtime::TensorView>>& inputs)
-{
-    if (m_function_map.size() != 1)
-    {
-        throw runtime_error("This call method only works if a single function is compiled");
-    }
-    FunctionInstance& instance = m_function_map.begin()->second;
-    instance.m_call_frame->call(outputs, inputs);
-    return true;
-}
