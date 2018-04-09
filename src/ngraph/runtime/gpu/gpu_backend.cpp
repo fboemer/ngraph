@@ -97,7 +97,7 @@ bool runtime::gpu::GPU_Backend::call(
     return true;
 }
 
-std::shared_ptr<ngraph::runtime::TensorView> runtime::gpu::GPU_Backend::make_primary_tensor_view(
+std::shared_ptr<ngraph::runtime::TensorView> runtime::gpu::GPU_Backend::create_tensor(
     const ngraph::element::Type& element_type, const Shape& shape, void* memory_pointer)
 {
     auto rc = make_shared<runtime::gpu::GPU_TensorView>(element_type, shape, memory_pointer);
