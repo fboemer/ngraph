@@ -124,9 +124,11 @@ Current nGraph Compiler full stack
 
 
 In addition to IA and NNP transformers, nGraph Compiler stack has transformers
-for multiple GPU types and an upcoming Intel deep learning accelerator. To
-support the growing number of transformers, we plan to expand the capabilities
-of the hybrid transformer with a cost model and memory sharing. With these new
-features, even if nGraph has multiple backends targeting the same hardware, it
-will partition the graph into multiple subgraphs and determine the best way to
-execute each subgraph.
+for multiple GPU types and an upcoming Intel deep learning accelerator. The
+nGraph Compiler stack also includes an experimental HE (homomorphic encryption)
+backend, which enables inference on encrypted data. To support the growing
+number of transformers, we plan to expand the capabilities  of the hybrid
+transformer with a cost model and memory sharing. With these new features, even
+if nGraph has multiple backends targeting the same hardware, it will partition
+the graph into multiple subgraphs and determine the best way to execute each
+subgraph.
