@@ -14,7 +14,7 @@ Description
 
 Produces tensor of the same element type and shape as the two inputs,
 where the value at each coordinate of ``output`` is true (1) if
-``arg0`` is less than ``arg1``, 0 otherwise.
+``arg0`` is less than ``arg1,`` 0 otherwise.
 
 Inputs
 ------
@@ -42,7 +42,7 @@ Mathematical Definition
 
 .. math::
 
-   \texttt{output}_{i_0, \ldots, i_{n-1}} = \texttt{arg0}_{i_0, \ldots, i_{n-1}} < \texttt{arg1}_{i_0, \ldots, i_{n-1}}
+   \mathtt{output}_{i_0, \ldots, i_{n-1}} = \mathtt{arg0}_{i_0, \ldots, i_{n-1}} < \mathtt{arg1}_{i_0, \ldots, i_{n-1}}
 
 
 C++ Interface

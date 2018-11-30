@@ -1,24 +1,26 @@
-/*******************************************************************************
-* Copyright 2017-2018 Intel Corporation
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*******************************************************************************/
+//*****************************************************************************
+// Copyright 2017-2018 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
 
 #include <exception>
 #include <sstream>
 
 #include "ngraph/log.hpp"
 #include "ngraph/log.hpp"
+#include "ngraph/op/concat.hpp"
+#include "ngraph/op/slice.hpp"
 #include "ngraph/pass/liveness.hpp"
 #include "ngraph/pass/manager.hpp"
 #include "ngraph/pass/memory_layout.hpp"
@@ -27,24 +29,70 @@
 using namespace std;
 using namespace ngraph;
 
-pass::MemoryLayout::MemoryLayout(size_t alignment)
+pass::MemoryLayout::MemoryLayout(size_t alignment, bool disable_memory_sharing)
     : m_alignment(alignment)
+    , m_disable_memory_sharing(disable_memory_sharing)
 {
+    if (m_alignment == 0)
+    {
+        throw invalid_argument("Memory alignment must be > 0");
+    }
 }
 
 bool pass::MemoryLayout::run_on_function(shared_ptr<ngraph::Function> function)
 {
-    MemoryManager mm(m_alignment);
+    MemoryManager mm(m_alignment, m_disable_memory_sharing);
     for (shared_ptr<Node> node : function->get_ordered_ops())
     {
+        std::map<descriptor::Tensor*, descriptor::Tensor*> in_place_outputs;
+        std::set<const descriptor::Tensor*> reused_inputs;
+
+        if (auto op = std::dynamic_pointer_cast<op::Op>(node))
+        {
+            // concat and slice in_place_oi should be treated differently
+            if (!std::dynamic_pointer_cast<op::Concat>(node) &&
+                !std::dynamic_pointer_cast<op::Slice>(node))
+            {
+                if (auto op_annotations = op->get_op_annotations())
+                {
+                    for (auto oi_pair : op_annotations->get_in_place_oi_pairs())
+                    {
+                        auto output = &node->get_outputs().at(oi_pair.output).get_tensor();
+                        auto input = &node->get_inputs().at(oi_pair.input).get_tensor();
+                        auto input_node =
+                            node->get_inputs().at(oi_pair.input).get_output().get_node();
+
+                        // For destructive kernel, this should be the last use
+                        // Non-destructive kernels can pass through if memory sharing is disabled
+                        if ((node->liveness_free_list.count(input) != 0 ||
+                             (m_disable_memory_sharing && !oi_pair.destructive)) &&
+                            node->liveness_new_list.count(output) != 0)
+                        {
+                            in_place_outputs.insert({output, input});
+                            reused_inputs.insert(input);
+                        }
+                    }
+                }
+            }
+        }
+
         for (descriptor::Tensor* tensor : node->liveness_new_list)
         {
-            size_t offset = mm.allocate(tensor->size());
+            size_t offset = in_place_outputs.count(tensor)
+                                ? in_place_outputs.at(tensor)->get_pool_offset()
+                                : mm.allocate(tensor->size());
             tensor->set_pool_offset(offset);
         }
-        for (const descriptor::Tensor* tensor : node->liveness_free_list)
+
+        if (!m_disable_memory_sharing)
         {
-            mm.free(tensor->get_pool_offset());
+            for (const descriptor::Tensor* tensor : node->liveness_free_list)
+            {
+                if (reused_inputs.count(tensor) == 0)
+                {
+                    mm.free(tensor->get_pool_offset());
+                }
+            }
         }
     }
     function->set_temporary_pool_size(mm.max_allocated());
@@ -58,12 +106,15 @@ pass::MemoryManager::node::node(size_t size, block_state state)
 {
 }
 
-pass::MemoryManager::MemoryManager(size_t alignment)
+pass::MemoryManager::MemoryManager(size_t alignment, bool disable_memory_reuse)
     : m_alignment{alignment}
-    , m_scheme{allocation_scheme::BEST_FIT}
+    , m_scheme{disable_memory_reuse ? allocation_scheme::NO_REUSE : allocation_scheme::FIRST_FIT}
     , m_max_allocated{0}
 {
-    // assert(m_base_offset % m_alignment == 0);
+    if (m_alignment == 0)
+    {
+        throw invalid_argument("Memory alignment must be > 0");
+    }
     m_node_list.emplace_back(numeric_limits<size_t>::max(), block_state::FREE);
 }
 
@@ -74,8 +125,16 @@ size_t pass::MemoryManager::allocate(size_t size)
     {
     case allocation_scheme::FIRST_FIT: rc = first_fit(size); break;
     case allocation_scheme::BEST_FIT: rc = best_fit(size); break;
+    case allocation_scheme::NO_REUSE: rc = no_reuse_allocator(size); break;
     }
     return rc;
+}
+
+size_t pass::MemoryManager::no_reuse_allocator(size_t size)
+{
+    size_t offset = m_max_allocated;
+    m_max_allocated += align(size, m_alignment);
+    return offset;
 }
 
 size_t pass::MemoryManager::best_fit(size_t size)
@@ -208,6 +267,10 @@ void pass::MemoryManager::dump(ostream& out)
 
 size_t pass::MemoryManager::align(size_t size, size_t alignment)
 {
+    if (alignment == 0)
+    {
+        throw invalid_argument("alignment must be > 0");
+    }
     if (size == 0)
     {
         size = alignment;

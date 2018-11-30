@@ -25,7 +25,7 @@
 # Override with make PARALLEL="-j <num_parallel_processes>" where
 #    <num_parallel_processes> = the number of make processes to run in parallel
 # Turn off with make PARALLEL=
-PARALLEL=22 
+PARALLEL=22
 
 # DIR is an internal variable that serves as an anchor to this cloned git
 # repository.  DIR is mounted into the docker container, so that builds
@@ -46,7 +46,6 @@ DOCKUSER_HOME=/home/dockuser
 VOLUME = -v "${DIR}:${DOCKUSER_HOME}/ngraph-test"
 GIT_COMMIT = $(shell git rev-parse HEAD)
 DBUILD_VERSION = ${GIT_COMMIT}_${PYTHON_VERSION}
-DBUILD_DIR = ${DIR}/contrib/docker/.build-${DBUILD_VERSION}
 
 # Look for evidence if GPU backend is supported on the platform
 NVIDIA_SMI = $(shell which nvidia-smi)
@@ -66,6 +65,8 @@ endif
 ifndef OS
     OS="ubuntu1604"
 endif
+
+DBUILD_DIR = ${DIR}/contrib/docker/.build-${DBUILD_VERSION}_${OS}
 
 # Configuration for specific reference OS in Dockerfiles
 ifeq ("$(shell echo ${OS} | grep centos)","centos74")
@@ -95,8 +96,8 @@ endif
 # For gcc builds, we do NOT regard warnings as errors
 # For clang builds, we DO make warnings into errors
 CMAKE_OPTIONS_COMMON=-DNGRAPH_BUILD_DOXYGEN_DOCS=ON -DNGRAPH_BUILD_SPHINX_DOCS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo $(CMAKE_OPTIONS_EXTRA)
-CMAKE_OPTIONS_GCC=$(CMAKE_OPTIONS_COMMON) -DNGRAPH_INSTALL_PREFIX=${DOCKUSER_HOME}/ngraph-test/BUILD-GCC/ngraph_dist
-CMAKE_OPTIONS_CLANG=$(MAKE_OPTIONS_COMMON)-DNGRAPH_INSTALL_PREFIX=${DOCKUSER_HOME}/ngraph-test/BUILD-CLANG/ngraph_dist -DCMAKE_CXX_COMPILER=clang++-3.9 -DCMAKE_C_COMPILER=clang-3.9 -DNGRAPH_WARNINGS_AS_ERRORS=ON -DNGRAPH_USE_PREBUILT_LLVM=TRUE
+CMAKE_OPTIONS_GCC=$(CMAKE_OPTIONS_COMMON) -DCMAKE_INSTALL_PREFIX=${DOCKUSER_HOME}/ngraph-test/BUILD-GCC/ngraph_dist
+CMAKE_OPTIONS_CLANG=$(MAKE_OPTIONS_COMMON)-DCMAKE_INSTALL_PREFIX=${DOCKUSER_HOME}/ngraph-test/BUILD-CLANG/ngraph_dist -DCMAKE_CXX_COMPILER=clang++-3.9 -DCMAKE_C_COMPILER=clang-3.9 -DNGRAPH_WARNINGS_AS_ERRORS=ON -DNGRAPH_USE_PREBUILT_LLVM=TRUE
 
 CALLER_UID := $(shell id -u)
 CALLER_GID := $(shell id -g)
@@ -133,12 +134,13 @@ expand_dockerfile_templates:
 	@echo "RUN_AS_USER_SCRIPT=${RUN_AS_USER_SCRIPT}"
 	cd "${DIR}"/contrib/docker
 	mkdir "${DBUILD_DIR}" || true
-	sed -e 's/\(FROM ngraph.*\)/\1:${DBUILD_VERSION}/' ${DOCKERFILE} > "${DBUILD_DIR}"/Dockerfile.build_ngraph
+	sed -e 's/\(FROM ngraph.*\)/\1:${DBUILD_VERSION}/' ${DOCKERFILE} > "${DBUILD_DIR}/Dockerfile.build_ngraph_${OS}"
 
 build_docker_image: expand_dockerfile_templates
+	@echo "OS=${OS}"
 	@echo ${DBUILD_DIR}
-	export CONTEXTDIR=${DBUILD_DIR};./make-dimage.sh
-	docker tag build_ngraph:latest build_ngraph:${DBUILD_VERSION}
+	export CONTEXTDIR=${DBUILD_DIR};export DOCKER_TAG=build_ngraph_${OS};./make-dimage.sh
+	docker tag build_ngraph_${OS}:latest build_ngraph_${OS}:${DBUILD_VERSION}
 
 build_docker: build_docker_image
 
@@ -153,7 +155,7 @@ sphinx_doc: build_docker_image
 	    ${DOCKER_RUN_ENV} \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-docs.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # Build
@@ -176,7 +178,7 @@ build_gcc: build_docker_image
 	    --env CMD_TO_RUN='build_gcc' \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-and-test.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # Build targets ALWAYS clean build directories (BUILD-GCC, BUILD-CLANG) prior to building
@@ -196,7 +198,7 @@ build_clang: build_docker_image
 	    --env CMD_TO_RUN='build_clang' \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-and-test.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # Check (run unit-tests)
@@ -215,7 +217,7 @@ check_gcc: build_gcc
 	    --env CMD_TO_RUN=check_gcc \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-and-test.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # Always use the platform-specific docker command to run unit tests
@@ -231,7 +233,7 @@ check_clang: build_clang
 	    --env CMD_TO_RUN=check_clang \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-and-test.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # Always use the platform-specific docker command to run unit tests
@@ -246,7 +248,7 @@ unit_test_check_gcc: build_gcc
 	    --env CMD_TO_RUN='unit-test-check_gcc' \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-and-test.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # Always use the platform-specific docker command to run unit tests
@@ -261,7 +263,7 @@ unit_test_check_clang: build_clang
 	    --env CMD_TO_RUN='unit-test-check_clang' \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-and-test.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 style_check_clang: build_clang
@@ -284,7 +286,7 @@ install_gcc: build_gcc
 	    --env CMD_TO_RUN=install_gcc \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-and-test.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # install targets do not depend on GPU dependencies
@@ -301,12 +303,12 @@ install_clang: build_clang
 	    --env CMD_TO_RUN=install_clang \
             --env RUN_UID="$(shell id -u)" \
             --env RUN_CMD="${DOCKUSER_HOME}/ngraph-test/contrib/docker/build-ngraph-and-test.sh" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # Interactive shell
 
-# Always use the platform-specific docker command for the interactive shell 
+# Always use the platform-specific docker command for the interactive shell
 shell: build_docker_image
 	# "make shell" runs an interactive shell in the docker image, for debugging
 	@echo "${DOCKER_CMD_MESG}"
@@ -314,7 +316,7 @@ shell: build_docker_image
             ${VOLUME} \
 	    ${DOCKER_RUN_ENV} \
             --env RUN_UID="$(shell id -u)" \
-            "build_ngraph:${DBUILD_VERSION}" \
+            "build_ngraph_${OS}:${DBUILD_VERSION}" \
 	    sh -c "cd ${DOCKUSER_HOME}; ${RUN_AS_USER_SCRIPT}"
 
 # Clean

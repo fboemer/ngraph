@@ -17,6 +17,12 @@ Glossary
       A component of nGraph that acts as a backend for a framework,
       allowing the framework to define and execute computations.
 
+   data-flow graph
+
+      Data-flow graphs are used to implement deep learning models. In  
+      a data-flow graph, nodes represent operations on data and edges 
+      represent data flowing between those operations. 
+
    framework
 
       A machine learning environment, such as TensorFlow, MXNet, or
@@ -24,8 +30,14 @@ Glossary
 
    function graph
 
-      The Intel nGraph library uses a function graph to represent an
+      The Intel nGraph Library uses a function graph to represent an
       ``op``'s parameters and results.
+
+   fusion
+   
+      Fusion is the fusing, combining, merging, collapsing, or refactoring
+      of a graph's functional operations (``ops``) into one or more of
+      nGraph's core ops.   
 
    op
 
@@ -40,6 +52,10 @@ Glossary
 
       In the context of a function graph, a "parameter" refers to what
       "stands in" for an argument in an ``op`` definition.
+
+   quantization
+
+      Quantization refers to the conversion of numerical data into a lower-precision representation. Quantization is often used in deep learning to reduce the time and energy needed to perform computations by reducing the size of data transfers and the number of steps needed to perform a computation. This improvement in speed and energy usage comes at a cost in terms of numerical accuracy, but deep learning models are often able to function well in spite of this reduced accuracy. 
 
    result
 
@@ -92,6 +108,17 @@ Glossary
       Tensors are maps from *coordinates* to scalar values, all of the
       same type, called the *element type* of the tensor.
 
+      .. figure:: graphics/descriptor-of-tensor.png
+         :width: 559px
+
+   
+   Tensorview 
+
+      The interface backends implement for tensor use. When there are no more 
+      references to the tensor view, it will be freed when convenient for the 
+      backend.
+
+
    model description
 
       A description of a program's fundamental operations that are 
@@ -100,5 +127,63 @@ Glossary
    export
    
       The serialized version of a trained model that can be passed to
-      one of the nGraph backends for computation.      
+      one of the nGraph backends for computation.
 
+   NN
+
+      :abbr:`NN (Neural Network)` is an acronym for "Neural Network". NN models 
+      are used to simulate possible combinations of binary logic processing 
+      and multi-layer (multi-dimensional) paths through which a :term:`data-flow graph` 
+      may be mapped or computed. A NN does not have centralized storage; rather, 
+      a NN manifests as information stored as patterns throughout the network 
+      structure. NNs may be **Recurrent** (feedback loop) or **Nonrecurrent** 
+      (feed-forward) with regard to the network vector.
+
+   ANN
+
+      :abbr:`Artificial Neural Network (ANN)`, often abbreviated as :term:`NN`. 
+
+   RANN 
+
+      :abbr:`Recurrent Artificial Neural Network (RANN)`, often abbreviated as 
+      :term:`RNN`.
+
+
+   RNN 
+    
+      A :abbr:`Recurrent Neural Network (RNN)` is a variety of :term:`NN` where 
+      output nodes from a layer on a data-flow graph have loopback to nodes that 
+      comprise an earlier layer. Since the RNN has no "centralized" storage, this 
+      loopback is the means by which the ANN can "learn" or be trained. There are 
+      several sub-categories of RNNs. The traditional RNN looks like: 
+
+      :math:`s_t = tanh(dot(W,x_{t-1}) + dot(U, s_{t-1})`
+
+      where :math:`x` is the input data, :math:`s` is the memory, and output is
+      :math:`o_t = softmax(dot(V, s_t))`.  :doc:`ops/tanh`, :doc:`ops/dot`, and 
+      :doc:`ops/softmax` are all nGraph :doc:`core Ops <ops/index>`.
+
+
+   LSTM
+
+      :abbr:`LSTM (Long Short-Term Memory)` is an acronym for "Long Short-Term 
+      Memory". LSTMs extend on the traditional RNN by providing a number of ways 
+      to "forget" the memory of the previous time step via a set of learnable 
+      gates. These gates help avoid the problem of exploding or vanishing 
+      gradients that occur in the traditional RNN.
+
+   SGD
+
+      :abbr:`Stochastic Gradient Descent (SGD)`, also known as incremental 
+      gradient descent, is an iterative method for optimizing a 
+      differentiable objective function.
+
+   validated
+
+      To provide optimizations with nGraph, we first confirm that a given 
+      workload is "validated" as being functional; that is, we can
+      successfully load its serialized graph as an nGraph :term:`function 
+      graph`
+
+
+ 

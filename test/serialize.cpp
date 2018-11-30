@@ -1,18 +1,18 @@
-/*******************************************************************************
-* Copyright 2017-2018 Intel Corporation
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*******************************************************************************/
+//*****************************************************************************
+// Copyright 2017-2018 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
 
 #include <fstream>
 #include <sstream>
@@ -45,6 +45,7 @@ T get_or_default(nlohmann::json& j, const std::string& key, const T& default_val
     return rc;
 }
 
+#if defined(NGRAPH_INTERPRETER_ENABLE)
 TEST(serialize, main)
 {
     // First create "f(A,B,C) = (A+B)*C".
@@ -52,7 +53,7 @@ TEST(serialize, main)
     auto A = make_shared<op::Parameter>(element::f32, shape);
     auto B = make_shared<op::Parameter>(element::f32, shape);
     auto C = make_shared<op::Parameter>(element::f32, shape);
-    auto f = make_shared<Function>((A + B) * C, op::ParameterVector{A, B, C}, "f");
+    auto f = make_shared<Function>((A + B) * C, ParameterVector{A, B, C}, "f");
 
     // Now make "g(X,Y,Z) = f(X,Y,Z) + f(X,Y,Z)"
     auto X = make_shared<op::Parameter>(element::f32, shape);
@@ -60,7 +61,7 @@ TEST(serialize, main)
     auto Z = make_shared<op::Parameter>(element::f32, shape);
     auto g = make_shared<Function>(make_shared<op::FunctionCall>(f, NodeVector{X, Y, Z}) +
                                        make_shared<op::FunctionCall>(f, NodeVector{X, Y, Z}),
-                                   op::ParameterVector{X, Y, Z},
+                                   ParameterVector{X, Y, Z},
                                    "g");
 
     // Now make "h(X,Y,Z) = g(X,Y,Z) + g(X,Y,Z)"
@@ -69,7 +70,7 @@ TEST(serialize, main)
     auto Z1 = make_shared<op::Parameter>(element::f32, shape);
     auto h = make_shared<Function>(make_shared<op::FunctionCall>(g, NodeVector{X1, Y1, Z1}) +
                                        make_shared<op::FunctionCall>(g, NodeVector{X1, Y1, Z1}),
-                                   op::ParameterVector{X1, Y1, Z1},
+                                   ParameterVector{X1, Y1, Z1},
                                    "h");
 
     string js = serialize(h, 4);
@@ -83,28 +84,26 @@ TEST(serialize, main)
     shared_ptr<Function> sfunc = deserialize(in);
 
     // Now call h on some test vectors.
-    auto manager = runtime::Manager::get("INTERPRETER");
-    auto external = manager->compile(sfunc);
-    auto backend = manager->allocate_backend();
-    auto cf = backend->make_call_frame(external);
+    auto backend = runtime::Backend::create("INTERPRETER");
 
-    auto x = backend->make_primary_tensor_view(element::f32, shape);
+    auto x = backend->create_tensor(element::f32, shape);
     copy_data(x, vector<float>{1, 2, 3, 4});
-    auto y = backend->make_primary_tensor_view(element::f32, shape);
+    auto y = backend->create_tensor(element::f32, shape);
     copy_data(y, vector<float>{5, 6, 7, 8});
-    auto z = backend->make_primary_tensor_view(element::f32, shape);
+    auto z = backend->create_tensor(element::f32, shape);
     copy_data(z, vector<float>{9, 10, 11, 12});
-    auto result = backend->make_primary_tensor_view(element::f32, shape);
+    auto result = backend->create_tensor(element::f32, shape);
 
-    cf->call({result}, {x, y, z});
+    backend->call_with_validate(sfunc, {result}, {x, y, z});
     EXPECT_EQ((vector<float>{216, 320, 440, 576}), read_vector<float>(result));
 
-    cf->call({result}, {y, x, z});
+    backend->call_with_validate(sfunc, {result}, {y, x, z});
     EXPECT_EQ((vector<float>{216, 320, 440, 576}), read_vector<float>(result));
 
-    cf->call({result}, {x, z, y});
+    backend->call_with_validate(sfunc, {result}, {x, z, y});
     EXPECT_EQ((vector<float>{200, 288, 392, 512}), read_vector<float>(result));
 }
+#endif
 
 TEST(serialize, existing_models)
 {
@@ -138,11 +137,12 @@ TEST(serialize, constant)
     const string tmp_file = "serialize_constant.cpio";
     Shape shape{2, 2, 2};
     auto A = op::Constant::create(element::f32, shape, {1, 2, 3, 4, 5, 6, 7, 8});
-    auto f = make_shared<Function>(A, op::ParameterVector{});
+    auto f = make_shared<Function>(A, ParameterVector{});
 
     EXPECT_EQ((vector<float>{1, 2, 3, 4, 5, 6, 7, 8}), A->get_vector<float>());
     serialize(tmp_file, f);
     auto g = deserialize(tmp_file);
+    ASSERT_NE(g, nullptr);
     file_util::remove_file(tmp_file);
     bool found = false;
     for (shared_ptr<Node> node : g->get_ops())

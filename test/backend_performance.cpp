@@ -1,18 +1,18 @@
-/*******************************************************************************
-* Copyright 2017-2018 Intel Corporation
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*******************************************************************************/
+//*****************************************************************************
+// Copyright 2017-2018 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
 
 #include <sstream>
 #include <string>
@@ -26,73 +26,13 @@
 #include "ngraph/log.hpp"
 #include "ngraph/op/concat.hpp"
 #include "ngraph/runtime/backend.hpp"
-#include "ngraph/runtime/call_frame.hpp"
-#include "ngraph/runtime/cpu/cpu_call_frame.hpp"
-#include "ngraph/runtime/manager.hpp"
 #include "ngraph/serializer.hpp"
 #include "ngraph/util.hpp"
-#include "util/benchmark.hpp"
 #include "util/random.hpp"
 #include "util/test_tools.hpp"
 
 using namespace std;
 using namespace ngraph;
-
-TEST(benchmark, mxnet_mnist_mlp_forward)
-{
-    const string json_path = file_util::path_join(SERIALIZED_ZOO, "mxnet/mnist_mlp_forward.json");
-    run_benchmark(json_path, "CPU", 1000);
-}
-
-TEST(benchmark, gpu_mxnet_mnist_mlp_forward)
-{
-    const string json_path = file_util::path_join(SERIALIZED_ZOO, "mxnet/mnist_mlp_forward.json");
-    run_benchmark(json_path, "GPU", 1000);
-}
-
-TEST(benchmark, mxnet_10_bucket_lstm)
-{
-    const string json_path = file_util::path_join(SERIALIZED_ZOO, "mxnet/10_bucket_LSTM.json");
-    run_benchmark(json_path, "CPU", 10);
-}
-
-TEST(benchmark, mxnet_lstm_backward)
-{
-    const string json_path = file_util::path_join(SERIALIZED_ZOO, "mxnet/LSTM_backward.json");
-    run_benchmark(json_path, "CPU", 10);
-}
-
-TEST(benchmark, mxnet_lstm_forward)
-{
-    const string json_path = file_util::path_join(SERIALIZED_ZOO, "mxnet/LSTM_forward.json");
-    run_benchmark(json_path, "CPU", 10);
-}
-
-TEST(benchmark, mxnet_seq2seq_forward)
-{
-    const string json_path = file_util::path_join(SERIALIZED_ZOO, "mxnet/Seq2Seq_forward.json");
-    run_benchmark(json_path, "CPU", 10);
-}
-
-TEST(benchmark, mxnet_seq2seq_backward)
-{
-    const string json_path = file_util::path_join(SERIALIZED_ZOO, "mxnet/Seq2Seq_backward.json");
-    run_benchmark(json_path, "CPU", 10);
-}
-
-TEST(benchmark, mxnet_sockeye_seq2seq_forward)
-{
-    const string json_path =
-        file_util::path_join(SERIALIZED_ZOO, "mxnet/Sockeye_Seq2Seq_forward.json");
-    run_benchmark(json_path, "CPU", 10);
-}
-
-TEST(benchmark, mxnet_sockeye_seq2seq_backward)
-{
-    const string json_path =
-        file_util::path_join(SERIALIZED_ZOO, "mxnet/Sockeye_Seq2Seq_backward.json");
-    run_benchmark(json_path, "CPU", 10);
-}
 
 //
 // Benchmarks a graph that concatenates six 32x1x200 arrays along the middle axis.
@@ -128,7 +68,7 @@ TEST(benchmark, concat_32x1x200_axis1_6)
     vector<std::string> backend_names{"INTERPRETER", "CPU"};
     vector<int> n_runs{200, 200, using_ref_kernels ? 200 : 200000}; // one for each backend
     vector<std::function<void()>> test_callbacks;                   // one for each backend
-    vector<std::shared_ptr<runtime::TensorView>> result_tvs;        // one for each backend
+    vector<std::shared_ptr<runtime::Tensor>> result_tvs;            // one for each backend
 
     for (std::string backend_name : backend_names)
     {
@@ -144,25 +84,22 @@ TEST(benchmark, concat_32x1x200_axis1_6)
         auto concat = make_shared<op::Concat>(params_as_nodes, concatenation_axis);
         auto f = make_shared<Function>(concat, params);
 
-        auto manager = runtime::Manager::get(backend_name);
-        auto external = manager->compile(f);
-        auto backend = manager->allocate_backend();
-        auto cf = backend->make_call_frame(external);
+        auto backend = runtime::Backend::create(backend_name);
 
-        vector<shared_ptr<runtime::TensorView>> input_vals;
+        vector<shared_ptr<runtime::Tensor>> input_vals;
 
         for (size_t i = 0; i < n_arrays; i++)
         {
-            auto tv = backend->make_primary_tensor_view(element::f32, shape_of_each_array);
+            auto tv = backend->create_tensor(element::f32, shape_of_each_array);
             copy_data(tv, data_arrays[i]);
             input_vals.push_back(tv);
         }
 
-        auto result_tv = backend->make_primary_tensor_view(element::f32, result_shape);
+        auto result_tv = backend->create_tensor(element::f32, result_shape);
         result_tvs.push_back(result_tv);
 
-        std::function<void()> cb = [input_vals, result_tv, cf]() {
-            cf->call({result_tv}, input_vals);
+        std::function<void()> cb = [&]() {
+            backend->call_with_validate(f, {result_tv}, input_vals);
         };
 
         test_callbacks.push_back(cb);

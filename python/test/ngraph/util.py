@@ -27,14 +27,14 @@ def _get_numpy_dtype(scalar):
 
 def get_runtime():
     """Return runtime object."""
-    manager_name = pytest.config.getoption('backend', default='CPU')
-    return ng.runtime(manager_name=manager_name)
+    backend_name = pytest.config.getoption('backend', default='CPU')
+    return ng.runtime(backend_name=backend_name)
 
 
 def run_op_node(input_data, op_fun, *args):
     """Run computation on node performing `op_fun`.
 
-    `op_fun` have to needs to accept a node as an argument.
+    `op_fun` has to accept a node as an argument.
 
     :param input_data: The input data for performed computation.
     :param op_fun: The function handler for operation we want to carry out.
@@ -62,7 +62,7 @@ def run_op_node(input_data, op_fun, *args):
 def run_op_numeric_data(input_data, op_fun, *args):
     """Run computation on node performing `op_fun`.
 
-    `op_fun` have to accept a scalar or an array.
+    `op_fun` has to accept a scalar or an array.
 
     :param input_data: The input data for performed computation.
     :param op_fun: The function handler for operation we want to carry out.

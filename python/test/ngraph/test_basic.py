@@ -19,6 +19,8 @@ import json
 
 import ngraph as ng
 from test.ngraph.util import get_runtime, run_op_node
+from ngraph.impl import Function, NodeVector
+from ngraph.exceptions import UserInputError
 
 
 @pytest.mark.parametrize('dtype', [np.float32, np.float64,
@@ -48,16 +50,36 @@ def test_simple_computation_on_ndarrays(dtype):
     assert np.allclose(result, np.array([[630, 704], [782, 864]], dtype=dtype))
 
 
+def test_function_call():
+    runtime = get_runtime()
+    dtype = int
+    shape = [2, 2]
+    parameter_a = ng.parameter(shape, dtype=dtype, name='A')
+    parameter_b = ng.parameter(shape, dtype=dtype, name='B')
+    parameter_c = ng.parameter(shape, dtype=dtype, name='C')
+    parameter_list = [parameter_a, parameter_b, parameter_c]
+    ops = ((parameter_a + parameter_b) * parameter_c)
+    func = Function(NodeVector([ops]), parameter_list, 'addmul')
+    fc = ng.function_call(func, NodeVector(parameter_list))
+    computation = runtime.computation(fc, parameter_a, parameter_b, parameter_c)
+
+    value_a = np.array([[1, 2], [3, 4]], dtype=dtype)
+    value_b = np.array([[5, 6], [7, 8]], dtype=dtype)
+    value_c = np.array([[9, 10], [11, 12]], dtype=dtype)
+    result = computation(value_a, value_b, value_c)
+    assert np.allclose(result, np.array([[54, 80], [110, 144]], dtype=dtype))
+
+
 def test_serialization():
     dtype = np.float32
-    manager_name = pytest.config.getoption('backend', default='CPU')
+    backend_name = pytest.config.getoption('backend', default='CPU')
 
     shape = [2, 2]
     parameter_a = ng.parameter(shape, dtype=dtype, name='A')
     parameter_b = ng.parameter(shape, dtype=dtype, name='B')
     parameter_c = ng.parameter(shape, dtype=dtype, name='C')
     model = (parameter_a + parameter_b) * parameter_c
-    runtime = ng.runtime(manager_name=manager_name)
+    runtime = ng.runtime(backend_name=backend_name)
     computation = runtime.computation(model, parameter_a, parameter_b, parameter_c)
     serialized = computation.serialize(2)
     serial_json = json.loads(serialized)
@@ -71,7 +93,7 @@ def test_serialization():
     expected = [[1, 2, 3],
                 [1, 2, 3],
                 [1, 2, 3]]
-    result = run_op_node([input_data], ng.broadcast, new_shape)
+    result = run_op_node([input_data], ng.broadcast_to, new_shape)
     assert np.allclose(result, expected)
 
     axis = 0
@@ -79,13 +101,13 @@ def test_serialization():
                 [2, 2, 2],
                 [3, 3, 3]]
 
-    result = run_op_node([input_data], ng.broadcast, new_shape, axis)
+    result = run_op_node([input_data], ng.broadcast_to, new_shape, axis)
     assert np.allclose(result, expected)
 
     input_data = np.arange(4)
     new_shape = [3, 4, 2, 4]
     expected = np.broadcast_to(input_data, new_shape)
-    result = run_op_node([input_data], ng.broadcast, new_shape)
+    result = run_op_node([input_data], ng.broadcast_to, new_shape)
     assert np.allclose(result, expected)
 
 
@@ -136,3 +158,72 @@ def test_convert_to_uint(val_type):
     expected = np.array(input_data, dtype=val_type)
     result = run_op_node([input_data], ng.convert, val_type)
     assert np.allclose(result, expected)
+
+
+def test_bad_data_shape():
+    A = ng.parameter(shape=[2, 2], name='A', dtype=np.float32)
+    B = ng.parameter(shape=[2, 2], name='B')
+    model = (A + B)
+    runtime = ng.runtime(backend_name='INTERPRETER')
+    computation = runtime.computation(model, A, B)
+
+    value_a = np.array([[1, 2]], dtype=np.float32)
+    value_b = np.array([[5, 6], [7, 8]], dtype=np.float32)
+    with pytest.raises(UserInputError):
+        computation(value_a, value_b)
+
+
+def test_constant_get_data_bool():
+    input_data = np.array([True, False, False, True])
+    node = ng.constant(input_data, dtype=np.bool)
+    retrieved_data = node.get_data()
+    assert np.allclose(input_data, retrieved_data)
+
+
+@pytest.mark.parametrize('data_type', [
+    np.float32,
+    np.float64,
+])
+def test_constant_get_data_floating_point(data_type):
+    np.random.seed(133391)
+    input_data = np.random.randn(2, 3, 4).astype(data_type)
+    min_value = -1.e20
+    max_value = 1.e20
+    input_data = min_value + input_data * max_value * data_type(2)
+    node = ng.constant(input_data, dtype=data_type)
+    retrieved_data = node.get_data()
+    assert np.allclose(input_data, retrieved_data)
+
+
+@pytest.mark.parametrize('data_type', [
+    np.int64,
+    np.int32,
+    np.int16,
+    np.int8,
+])
+def test_constant_get_data_signed_integer(data_type):
+    np.random.seed(133391)
+    input_data = np.random.randint(np.iinfo(data_type).min, np.iinfo(data_type).max,
+                                   [2, 3, 4]).astype(data_type)
+    node = ng.constant(input_data, dtype=data_type)
+    retrieved_data = node.get_data()
+    assert np.allclose(input_data, retrieved_data)
+
+
+@pytest.mark.parametrize('data_type', [
+    np.uint64,
+    np.uint32,
+    np.uint16,
+    np.uint8,
+])
+def test_constant_get_data_unsigned_integer(data_type):
+    np.random.seed(133391)
+    input_data = np.random.randn(2, 3, 4).astype(data_type)
+    input_data = (
+        np.iinfo(data_type).min
+        + input_data * np.iinfo(data_type).max
+        + input_data * np.iinfo(data_type).max
+    )
+    node = ng.constant(input_data, dtype=data_type)
+    retrieved_data = node.get_data()
+    assert np.allclose(input_data, retrieved_data)

@@ -23,6 +23,8 @@ Low level wrappers for the nGraph c++ api in ngraph::op.
 import sys
 import six
 
+import numpy as np
+
 # workaround to load the libngraph.so with RTLD_GLOBAL
 if six.PY3:
     import os
@@ -36,16 +38,29 @@ from _pyngraph.op import Abs
 from _pyngraph.op import Acos
 from _pyngraph.op import Add
 from _pyngraph.op import AllReduce
+from _pyngraph.op import And
+from _pyngraph.op import ArgMax
+from _pyngraph.op import ArgMin
 from _pyngraph.op import Asin
 from _pyngraph.op import Atan
 from _pyngraph.op import AvgPool
 from _pyngraph.op import AvgPoolBackprop
-from _pyngraph.op import BatchNorm
-from _pyngraph.op import BatchNormBackprop
+from _pyngraph.op import BatchNormTraining
+from _pyngraph.op import BatchNormInference
+from _pyngraph.op import BatchNormTrainingBackprop
 from _pyngraph.op import Broadcast
 from _pyngraph.op import Ceiling
 from _pyngraph.op import Concat
 from _pyngraph.op import Constant
+
+""" Retrieve Constant inner data.
+
+    Internally uses PyBind11 Numpy's buffer protocol.
+    
+    :return Numpy array containing internally stored constant data.
+"""
+Constant.get_data = lambda self: np.array(self, copy=True)
+
 from _pyngraph.op import Convert
 from _pyngraph.op import Convolution
 from _pyngraph.op import ConvolutionBackpropData
@@ -64,6 +79,7 @@ from _pyngraph.op import GreaterEq
 from _pyngraph.op import Less
 from _pyngraph.op import LessEq
 from _pyngraph.op import Log
+from _pyngraph.op import LRN
 from _pyngraph.op import Max
 from _pyngraph.op import Maximum
 from _pyngraph.op import MaxPool
@@ -76,9 +92,9 @@ from _pyngraph.op import Not
 from _pyngraph.op import NotEqual
 from _pyngraph.op import OneHot
 from _pyngraph.op import Op
+from _pyngraph.op import Or
 from _pyngraph.op import Pad
 from _pyngraph.op import Parameter
-from _pyngraph.op import ParameterVector
 from _pyngraph.op import Power
 from _pyngraph.op import Product
 from _pyngraph.op import Reduce
@@ -98,3 +114,4 @@ from _pyngraph.op import Subtract
 from _pyngraph.op import Sum
 from _pyngraph.op import Tan
 from _pyngraph.op import Tanh
+from _pyngraph.op import TopK

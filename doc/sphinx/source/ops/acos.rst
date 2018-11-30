@@ -12,9 +12,9 @@ Acos
 Description
 ===========
 
-Produces a tensor of the same element type and shape as ``arg``, where the 
+Produces a tensor of the same element type and shape as ``arg,`` where the 
 value at each coordinate of ``output`` is the inverse cosine of the value 
-at the corresponding coordinate of ``arg``.
+at the corresponding coordinate of ``arg.``
 
 Inputs
 ------
@@ -40,14 +40,14 @@ Mathematical Definition
 
 .. math::
 
-   \texttt{output}_{i_0, \ldots, i_{n-1}} = \cos^{-1}(\texttt{arg}_{i_0, \ldots, i_{n-1}})
+   \mathtt{output}_{i_0, \ldots, i_{n-1}} = \cos^{-1}(\mathtt{arg}_{i_0, \ldots, i_{n-1}})
 
 Backprop
 ========
 
 .. math::
 
-   \overline{\texttt{arg}} \leftarrow -\frac{\Delta}{\sqrt{1-\texttt{arg}^2}}
+   \overline{\mathtt{arg}} \leftarrow -\frac{\Delta}{\sqrt{1-\mathtt{arg}^2}}
 
 
 C++ Interface

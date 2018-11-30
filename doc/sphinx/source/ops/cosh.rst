@@ -12,9 +12,9 @@ Cosh
 Description
 ===========
 
-Produces a tensor of the same element type and shape as ``arg``, where
+Produces a tensor of the same element type and shape as ``arg,`` where
 the value at each coordinate of ``output`` is the hyperbolic cosine of
-the value at the corresponding coordinate of ``arg``.
+the value at the corresponding coordinate of ``arg.``
 
 Inputs
 ------
@@ -40,7 +40,7 @@ Mathematical Definition
 
 .. math::
 
-   \texttt{output}_{i_0, \ldots, i_{n-1}} = \cosh(\texttt{arg}_{i_0, \ldots, i_{n-1}})
+   \mathtt{output}_{i_0, \ldots, i_{n-1}} = \cosh(\mathtt{arg}_{i_0, \ldots, i_{n-1}})
 
 
 Backprop
@@ -48,7 +48,7 @@ Backprop
 
 .. math::
 
-   \overline{\texttt{arg}} \leftarrow \Delta\ \sinh(\texttt{arg})
+   \overline{\mathtt{arg}} \leftarrow \Delta\ \sinh(\mathtt{arg})
 
 
 C++ Interface

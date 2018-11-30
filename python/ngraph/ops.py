@@ -17,23 +17,25 @@
 """Factory functions for all ngraph ops."""
 import numpy as np
 
-from ngraph.impl import AxisSet, AxisVector, Coordinate, CoordinateDiff, Node, NodeVector, \
-    Shape, Strides
+from ngraph.impl import AxisSet, AxisVector, Coordinate, CoordinateDiff, Function, Node, \
+    NodeVector, Shape, Strides
 
-from ngraph.impl.op import Abs, Acos, Add, Asin, Atan, AvgPool, Broadcast, Ceiling, Concat, \
-    Constant, Convert, Convolution, Cos, Cosh, Divide, Dot, Equal, Exp, Floor, Greater, GreaterEq,\
-    Less, LessEq, Log, Max, Maximum, MaxPool, Min, Minimum, Multiply, Negative, Not, NotEqual, \
-    OneHot, Pad, Parameter, Product, Power, Relu, ReplaceSlice, Reshape, Reverse, Select, \
-    Sign, Sin, Sinh, Slice, Softmax, Sqrt, Subtract, Sum, Tan, Tanh
+from ngraph.impl.op import Abs, Acos, Add, And, Asin, ArgMax, ArgMin, Atan, AvgPool, \
+    BatchNormTraining, BatchNormInference, Broadcast, Ceiling, Concat, Constant, Convert, \
+    Convolution, ConvolutionBackpropData, Cos, Cosh, Divide, Dot, Equal, Exp, Floor, \
+    FunctionCall, GetOutputElement, Greater, GreaterEq, Less, LessEq, Log, LRN, Max, \
+    Maximum, MaxPool, Min, Minimum, Multiply, Negative, Not, NotEqual, OneHot, Or, Pad, \
+    Parameter, Product, Power, Reduce, Relu, ReplaceSlice, Reshape, Reverse, Select, Sign, \
+    Sin, Sinh, Slice, Softmax, Sqrt, Subtract, Sum, Tan, Tanh, TopK
 
-from typing import Iterable, List
+from typing import Callable, Iterable, List, Union
 
 from ngraph.utils.broadcasting import get_broadcast_axes
 from ngraph.utils.decorators import nameable_op, binary_op, unary_op
 from ngraph.utils.input_validation import assert_list_of_ints
 from ngraph.utils.reduction import get_reduction_axes
 from ngraph.utils.types import NumericType, NumericData, TensorShape, make_constant_node, \
-    NodeInput
+    NodeInput, ScalarData
 from ngraph.utils.types import get_element_type
 
 
@@ -187,14 +189,16 @@ def ceiling(node, name=None):  # type: (NodeInput, str) -> Node
 
 
 @unary_op
-def reshape(node, input_order, output_shape, name=None):
-    # type: (Node, List[int], List[int], str) -> None
+def reshape(node, output_shape, input_order=None, name=None):
+    # type: (Node, List[int], List[int], str) -> Node
     """Return reshaped node according to provided parameters.
 
     :param node: The tensor we want to reshape.
     :param input_order: The order in which to iterate over input axes of input tensor.
     :param output_shape: The new shape for input tensor.
     """
+    if input_order is None:
+        input_order = list(range(len(node.shape)))
     return Reshape(node, AxisVector(input_order), Shape(output_shape))
 
 
@@ -390,6 +394,30 @@ def less_eq(left_node, right_node, name=None):  # type: (NodeInput, NodeInput, s
     return LessEq(left_node, right_node)
 
 
+@binary_op
+def logical_and(left_node, right_node, name=None):  # type: (NodeInput, NodeInput, str) -> Node
+    """Return node which perform logical and operation on input nodes element-wise.
+
+    :param left_node: The first input node providing data.
+    :param right_node: The second input node providing data.
+    :param name: The optional new name for output node.
+    :return: The node performing logical and operation on input nodes corresponding elements.
+    """
+    return And(left_node, right_node)
+
+
+@binary_op
+def logical_or(left_node, right_node, name=None):  # type: (NodeInput, NodeInput, str) -> Node
+    """Return node which performs logical or operation on input nodes element-wise.
+
+    :param left_node: The first input node providing data.
+    :param right_node: The second input node providing data.
+    :param name: The optional new name for output node.
+    :return: The node performing logical or operation on input nodes corresponding elements.
+    """
+    return Or(left_node, right_node)
+
+
 @unary_op
 def logical_not(node, name=None):  # type: (Node, str) -> Node
     """Return node which applies logical negation to the input node elementwise."""
@@ -417,14 +445,59 @@ Node.__ge__ = greater_eq
 
 # Custom ops
 @nameable_op
-def broadcast(node, new_shape, axis=None, name=None):  # type: (Node, TensorShape, int, str) -> Node
-    """Return node which broadcasts input node values to specified shape.
+def broadcast(node, new_shape, broadcast_axes, name=None):
+    # type: (Node, TensorShape, Iterable[int], str) -> Node
+    """Create a node which broadcasts the input node's values along specified axes to a desired shape.
+
+    :param node: The node with input tensor data.
+    :param new_shape: The new shape we want to broadcast tensor to.
+    :param broadcast_axes: The axis positions (0-based) in the result that are being broadcast.
+    :param name: Optional new name for output node.
+    :return: New node with broadcast shape.
+    """
+    return Broadcast(node, Shape(new_shape), AxisSet(broadcast_axes))
+
+
+@nameable_op
+def broadcast_to(node, new_shape, axis=None, name=None):
+    # type: (Node, TensorShape, int, str) -> Node
+    """Create a node which broadcasts the input node's values to a desired shape.
+
+    `broadcast_to` will attempt to automatically determine which axes need broadcasting.
+
+    The optional `axis` parameter specifies the starting axis position (0-based) in the output
+    shape from which the current shape of the tensor matches the desired new shape.
+
+    e.g. current_shape: [4, 5], new_shape: [2, 3, 4, 5, 6], axis: 2
+
+    By using the `axis` parameter you can control which output axis to broadcast along.
+
+    Example:
+
+    >>> input_node = ng.constant([1, 2, 3])
+    >>> current_shape = [3]
+    >>> new_shape = [3, 3]
+    >>> ng.broadcast_to(input_node, new_shape, axis=1)
+    array([[1, 2, 3],
+           [1, 2, 3],
+           [1, 2, 3]])
+
+    >>> ng.broadcast_to(input_node, new_shape, axis=0)
+    array([[1, 1, 1],
+           [2, 2, 2],
+           [3, 3, 3]])
+
+    If the `axis` parameter is not specified, `broadcast_to` will attempt to match shapes,
+    assuming the current shape matches the rightmost positions of the desired new shape.
+    This behaviour is similar to NumPy's broadcasting.
+
+    i.e. default `axis = len(new_shape) - len(current_shape)`
 
     :param node: The node with input tensor data.
     :param new_shape: The new shape we want to broadcast tensor to.
     :param axis: The axis along which we perform broadcasting.
     :param name: Optional new name for output node.
-    :return: New node with broadcasted shape.
+    :return: New node with broadcast shape.
     """
     return Broadcast(node, Shape(new_shape), get_broadcast_axes(new_shape, node.shape, axis))
 
@@ -526,6 +599,49 @@ def convolution(data_batch,                     # type: Node
     return Convolution(data_batch, filter_weights, Strides(filter_strides),
                        Strides(filter_dilation_strides), CoordinateDiff(padding_below),
                        CoordinateDiff(padding_above), Strides(data_dilation_strides))
+
+
+@nameable_op
+def convolution_backprop_data(data_batch_shape,                      # type: TensorShape
+                              filters,                               # type: Node
+                              output_delta,                          # type: Node
+                              window_movement_strides_forward=None,  # type: List[int]
+                              window_dilation_strides_forward=None,  # type: List[int]
+                              padding_below_forward=None,            # type: List[int]
+                              padding_above_forward=None,            # type: List[int]
+                              data_dilation_strides_forward=None,    # type: List[int]
+                              name=None,                             # type: str
+                              ):
+    # type: (...) -> Node
+    """Return node performing a batched-convolution data batch-backprop operation.
+
+    :param data_batch_shape: The shape of the data batch from forward-prop.
+    :param filters: The node producing the filters from forward-prop.
+    :param output_delta: The node producing output delta.
+    :param window_movement_strides_forward: The window movement strides from forward-prop.
+    :param window_dilation_strides_forward: The window dilation strides from forward-prop.
+    :param padding_below_forward: The padding-below sizes from forward-prop.
+    :param padding_above_forward: The padding-above sizes from forward-prop.
+    :param data_dilation_strides_forward: The data dilation strides from forward-prop.
+    """
+    spatial_dim_count = len(data_batch_shape) - 2
+    if window_movement_strides_forward is None:
+        window_movement_strides_forward = [1] * spatial_dim_count
+    if window_dilation_strides_forward is None:
+        window_dilation_strides_forward = [1] * spatial_dim_count
+    if padding_below_forward is None:
+        padding_below_forward = [0] * spatial_dim_count
+    if padding_above_forward is None:
+        padding_above_forward = [0] * spatial_dim_count
+    if data_dilation_strides_forward is None:
+        data_dilation_strides_forward = [1] * spatial_dim_count
+
+    return ConvolutionBackpropData(Shape(data_batch_shape), filters, output_delta,
+                                   Strides(window_movement_strides_forward),
+                                   Strides(window_dilation_strides_forward),
+                                   CoordinateDiff(padding_below_forward),
+                                   CoordinateDiff(padding_above_forward),
+                                   Strides(data_dilation_strides_forward))
 
 
 @nameable_op
@@ -633,6 +749,39 @@ def prod(node, reduction_axes=None, name=None):
     return Product(node, AxisSet(get_reduction_axes(node, reduction_axes)))
 
 
+@nameable_op
+def reduce(node,                 # type: Node
+           initial_value,        # type: ScalarData
+           reduction_function,   # type: Union[Callable, Function]
+           reduction_axes=None,  # type: List[int]
+           name=None,            # type: str
+           ):
+    # type: (...) -> Node
+    """Perform general tensor reduction operation.
+
+    :param node: The node providing data for reduction operation.
+    :param initial_value: The initial value for reduction operation.
+    :param reduction_function: The function performing binary reduction operation or a nGraph
+                           Function object. The operation must accept two nodes providing scalar
+                           operands and return a node which produces a scalar result.
+    :param reduction_axes: The list of axes indices to be reduced. Default to reduce all axes.
+    :param name: The new name for output node.
+    :return: The node performing reduction operation with provided reduction node.
+    """
+    if reduction_axes is None:
+        reduction_axes = list(range(len(node.shape)))
+    init_val_node = constant(initial_value)
+    if not isinstance(reduction_function, Function):
+        # wrap reduction function into Function object
+        param1 = Parameter(node.get_element_type(), Shape([]))
+        param2 = Parameter(node.get_element_type(), Shape([]))
+        reduction_operation = Function(NodeVector([reduction_function(param1, param2)]),
+                                       [param1, param2], 'reduction_operation')
+    else:
+        reduction_operation = reduction_function
+    return Reduce(node, init_val_node, reduction_operation, AxisSet(set(reduction_axes)))
+
+
 # reshape ops
 @nameable_op
 def slice(node, lower_bounds, upper_bounds, strides=None, name=None):
@@ -676,7 +825,7 @@ def softmax(node, axes, name=None):  # type: (Node, Iterable[int], str) -> Node
     :param name: The optional new name for output node.
     :return: The new node with softmax operation applied on each element.
     """
-    if type(axes) is not set:
+    if not isinstance(axes, set):
         axes = set(axes)
     return Softmax(node, AxisSet(axes))
 
@@ -761,3 +910,104 @@ def reverse(node, reversed_axes, name=None):  # type: (Node, List[int], str) -> 
     :return: The new node with reversed axes.
     """
     return Reverse(node, AxisSet(reversed_axes))
+
+
+@nameable_op
+def batch_norm(eps,             # type: float
+               gamma,           # type: Node
+               beta,            # type: Node
+               data,            # type: Node
+               mean=None,       # type: Node
+               variance=None,   # type: Node
+               name=None,       # type: str
+               ):
+    # type: (...) -> Node
+    """Return batch normalization node."""
+    if mean is None and variance is None:
+        return BatchNormTraining(data, gamma, beta, eps)
+    else:
+        return BatchNormInference(data, gamma, beta, mean, variance, eps)
+
+
+@nameable_op
+def lrn(data,       # type: Node
+        alpha=1,    # type: float
+        beta=0.5,   # type: float
+        bias=1,     # type: float
+        size=5,     # type: int
+        name=None,  # type: str
+        ):
+    # type: (...) -> Node
+    """Return a node which performs element-wise Local Response Normalization (LRN) operation.
+
+    :param data: Input data.
+    :param alpha: A scale factor (usually positive).
+    :param beta: An exponent.
+    :param bias: An offset (usually positive) to avoid dividing by 0.
+    :param size: Width of the 1-D normalization window.
+    :param name: An optional name of the output node.
+    :return: The new node which performs LRN.
+    """
+    return LRN(data, alpha, beta, bias, size)
+
+
+@nameable_op
+def argmax(data,     # type: Node
+           axis=0,   # type: int
+           ):
+    # type: (...) -> Node
+    """Return a node which performs ArgMax index reduction operation.
+
+    :param data: Input data.
+    :param axis: Reduction Axis.
+    :return: The new node which performs ArgMax
+    """
+    return ArgMax(data, axis, get_element_type(np.int32))
+
+
+@nameable_op
+def argmin(data,    # type: Node
+           axis=0,  # type: int
+           ):
+    # type: (...) -> Node
+    """Return a node which performs ArgMin index reduction operation.
+
+    :param data: Input data.
+    :param axis: Reduction Axis.
+    :return: The new node which performs ArgMin
+    """
+    return ArgMin(data, axis, get_element_type(np.int32))
+
+
+@nameable_op
+def topk(data,       # type: Node
+         k,          # type: int
+         kaxis=-1,   # type: int
+         cmax=True,  # type: bool
+         ):
+    # type: (...) -> Node
+    """Return a node which performs TopK.
+
+    :param data: Input data.
+    :param kaxis: TopK Axis.
+    :param k: K.
+    :param cmax: Compute TopK largest (True) or smallest (False)
+    :return: The new node which performs TopK (both indices and values)
+    """
+    return TopK(data,
+                len(data.get_shape()) - 1 if kaxis == -1 else kaxis,
+                get_element_type(np.int32),
+                k,
+                cmax)
+
+
+@nameable_op
+def function_call(function_to_call, args):  # type: (Node, NodeVector) -> Node
+    """Return Function call op."""
+    return FunctionCall(function_to_call, args)
+
+
+@nameable_op
+def get_output_element(data, index):  # type: (Node, int) -> Node
+    """Return the n-th element of the input tuple."""
+    return GetOutputElement(data, index)

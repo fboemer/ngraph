@@ -1,47 +1,30 @@
-/*******************************************************************************
-* Copyright 2017-2018 Intel Corporation
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*******************************************************************************/
+//*****************************************************************************
+// Copyright 2017-2018 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
 
 #pragma once
 
-#include "ngraph/op/util/requires_tensor_view_args.hpp"
+#include "ngraph/graph_util.hpp"
+#include "ngraph/op/op.hpp"
 
 namespace ngraph
 {
     namespace op
     {
         /// \brief Batched max pooling operation, with optional padding and window stride.
-        ///
-        /// (TODO: add an account of the optional padding to this comment.)
-        ///
-        /// Max pooling takes as its input a data batch tensor of shape \f$(N,C,d_1,\dots,d_n)\f$ where \f$n > 0\f$, every \f$d_i > 0\f$, and where \f$N\f$ is
-        /// the batch size, and \f$C > 0\f$ is the number of channels (sometimes called features). The dimensions \f$(d_1,\dots,d_n)\f$ correspond to the shape of
-        /// an \f$n\f$-dimensional data item in a batch. For example, where \f$n=2\f$, the data may represent a two-dimensional image. It also takes two parameters:
-        ///
-        /// 1. <i>(the window shape)</i> a size vector \f$(w_1,\dots,w_n)\f$ where every \f$w_i \le d_i\f$; and
-        /// 2. <i>(the window movement strides, optional)</i> a vector of positive integers \f$(s_1,\dots,s_n)\f$.
-        ///
-        /// The output has the shape \f$(N,C,d'_1,\dots,d'_n)\f$, where \f$d'_n = \lceil \frac{d_i - w_i + 1}{s_i} \rceil\f$.
-        ///
-        /// Given an input data batch tensor \f$T_\textit{in}\f$, the output tensor is defined by the equation
-        ///
-        /// \f[
-        ///      T_\textit{out}[a,c,i_1,\dots,i_n] = \max_{j_1 = s_1 i_1, \dots, j_n = s_n i_n}^{j_1 = s_1 i_1 + w_1 - 1, \dots, j_n = s_n i_n + w_n - 1} (T_\textit{in}[a,c,j_1,\dots,j_n])
-        /// \f]
-        ///
-        class MaxPool : public util::RequiresTensorViewArgs
+        class MaxPool : public Op
         {
         public:
             /// \brief Constructs a batched max pooling operation.
@@ -56,6 +39,8 @@ namespace ngraph
                     const Strides& window_movement_strides,
                     const Shape& padding_below,
                     const Shape& padding_above);
+
+            void validate_and_infer_types() override;
 
             /// \brief Constructs a batched, unpadded max pooling operation (i.e., all padding shapes are set to 0).
             ///
@@ -83,6 +68,12 @@ namespace ngraph
             const Shape& get_padding_below() const { return m_padding_below; }
             /// \return The above-padding shape.
             const Shape& get_padding_above() const { return m_padding_above; }
+            /// \return The default value for MaxPool.
+            virtual std::shared_ptr<Node> get_default_value() const override
+            {
+                return ngraph::make_constant_from_string("0", get_element_type(), get_shape());
+            }
+
         protected:
             virtual void generate_adjoints(autodiff::Adjoints& adjoints,
                                            const NodeVector& deltas) override;
@@ -93,7 +84,7 @@ namespace ngraph
             Shape m_padding_above;
         };
 
-        class MaxPoolBackprop : public util::RequiresTensorViewArgs
+        class MaxPoolBackprop : public Op
         {
         public:
             MaxPoolBackprop(const std::shared_ptr<Node>& arg_forward,
@@ -101,27 +92,30 @@ namespace ngraph
                             const Shape& window_shape,
                             const Strides& window_movement_strides,
                             const Shape& padding_below,
-                            const Shape& padding_above,
-                            const std::shared_ptr<op::MaxPool>& forward_op = nullptr);
+                            const Shape& padding_above);
+
+            MaxPoolBackprop(const std::shared_ptr<Node>& arg_forward,
+                            const std::shared_ptr<Node>& delta,
+                            const std::shared_ptr<Node>& result_forward,
+                            const Shape& window_shape,
+                            const Strides& window_movement_strides,
+                            const Shape& padding_below,
+                            const Shape& padding_above);
 
             virtual std::shared_ptr<Node>
                 copy_with_new_args(const NodeVector& new_args) const override;
+
+            void validate_and_infer_types() override;
 
             const Shape& get_window_shape() const { return m_window_shape; }
             const Strides& get_window_movement_strides() const { return m_window_movement_strides; }
             const Shape& get_padding_below() const { return m_padding_below; }
             const Shape& get_padding_above() const { return m_padding_above; }
-            /// \return A pointer to the corresponding `MaxPool` forward prop op. This may be
-            ///         `nullptr` if no such pointer was provided at construction time, or if the
-            ///         forward op has been freed due to graph rewriting.
-            std::shared_ptr<op::MaxPool> get_forward_op() const;
-
         protected:
             Shape m_window_shape;
             Strides m_window_movement_strides;
             Shape m_padding_below;
             Shape m_padding_above;
-            std::weak_ptr<op::MaxPool> m_forward_op;
         };
     }
 }

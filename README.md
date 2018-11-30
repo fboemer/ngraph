@@ -1,43 +1,72 @@
-# nGraph library [![Build Status][build-status-badge]][build-status]
+# nGraph Compiler Stack
 
-Welcome to Intel® nGraph™, an open source C++ library, compiler and
-runtime. This project enables modern compute platforms to run and
-train Deep Neural Network (DNN) models. It is framework-neutral and
-supports a variety of backends used by Deep Learning (DL) frameworks.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/NervanaSystems/ngraph/blob/master/LICENSE) [![Build Status][build-status-badge]][build-status] 
 
-![nGraph ecosystem][ngraph-ecosystem]
+<div align="left">
+  <h4>
+    <a href="./ABOUT.md">Architecture & features</a> | <a href="./ecosystem-overview.md" >Ecosystem</a> | <a href="https://ngraph.nervanasys.com/docs/latest/project/release-notes.html">Release notes</a><span> | </span> <a href="https://ngraph.nervanasys.com/docs/latest">Documentation</a><span> | </span> <a href="#How-to-contribute" >Contribution guide</a>
+ </h4>
+</div>
 
-
-|Framework   | bridge available? | ONNX support?  |
-|------------|-------------------|----------------|
-| neon       | yes               | yes            |
-| MXNet*     | yes               | yes            |
-| TensorFlow*| yes               | yes            |
-| PyTorch*   | not yet           | yes            |
-| CNTK*      | not yet           | yes            |
-| Caffe2*    | not yet           | yes            |
+## Quick start
 
 
-## Documentation
+To begin using nGraph with popular frameworks to accelerate deep learning 
+workloads on CPU for inference, please refer to the links below. 
 
-See our [install] docs for how to get started.
+|  Framework (Version)       | Installation guide                     | Notes  
+|----------------------------|----------------------------------------|-----------------------------------
+| TensorFlow* 1.12           | [Pip package] or [Build from source]   | 17 [Validated workloads]
+| MXNet* 1.4                 | [Enable the module] or [Source compile]| 17 [Validated workloads]   
+| ONNX 1.3                   | [Pip package]                          | 14 [Validated workloads] 
 
-For this early release, we provide [framework integration guides] to
-compile MXNet and TensorFlow-based projects. If you already have a
-trained model, we've put together a getting started guide for
-[how to import] a deep learning model and start working with the nGraph
-APIs.
+Frameworks using nGraph Compiler stack to execute workloads have shown 
+**up to 45X** performance boost when compared to native framework 
+implementations. We've also seen performance boosts running workloads that 
+are not included on the list of [Validated workloads], thanks to our 
+powerful subgraph pattern matching.
 
-## Support
+Additional work is also being done via [PlaidML] which will feature running 
+compute for Deep Learning with GPU accleration. See our 
+[Architecture and features] for what the stack looks like today and watch our 
+[Release Notes] for recent changes.
 
-Please submit your questions, feature requests and bug reports via
-[GitHub issues].
 
-## How to Contribute
+## What is nGraph Compiler? 
+
+nGraph Compiler aims to accelerate developing and deploying AI workloads 
+using any deep learning framework with a variety of hardware targets. 
+We strongly believe in providing freedom, performance, and ease-of-use to AI 
+developers. 
+
+The diagram below shows what deep learning frameworks and hardware targets
+we support. More details on these current and future plans are in the [ecosystem]
+section. 
+
+
+![nGraph wireframe][ngraph_wireframes_with_notice]
+
+
+While the ecosystem shown above is all functioning, we have validated 
+performance for deep learning inference on CPU processors such as Intel® Xeon®. 
+Please refer to the [Release notes] to learn more. The Gold release 
+is targeted for April 2019; it will feature broader workload coverage, 
+including quantized graphs, and more detail on our advanced support for 
+``int8``. 
+
+Our documentation has extensive information about how to use nGraph Compiler 
+stack to create an nGraph computational graph, integrate custom frameworks, 
+and to interact with supported backends. If you wish to contribute to the 
+project, please don't hesitate to ask questions in [GitHub issues] after 
+reviewing our contribution guide below. 
+
+
+## How to contribute
 
 We welcome community contributions to nGraph. If you have an idea how
-to improve the library:
+to improve it:
 
+* See the [contrib guide] for code formatting and style guidelines.
 * Share your proposal via [GitHub issues].
 * Ensure you can build the product and run all the examples with your patch.
 * In the case of a larger feature, create a test.
@@ -49,11 +78,34 @@ to improve the library:
   modifications are necessary, may provide feedback to guide you. When
   accepted, your pull request will be merged to the repository.
 
-[install]: http://ngraph.nervanasys.com/docs/latest/install.html
+
+[Ecosystem]: ecosystem-overview
+[Architecture and features]:https://ngraph.nervanasys.com/docs/latest/project/about.html
+[Documentation]: https://ngraph.nervanasys.com/docs/latest
+[build the Library]: https://ngraph.nervanasys.com/docs/latest/buildlb.html
+[Getting Started Guides]: Getting-started-guides
+[Validated workloads]: https://ngraph.nervanasys.com/docs/latest/frameworks/validation-testing.html
+[Functional]: https://github.com/NervanaSystems/ngraph-onnx/ 
+[How to contribute]: How-to-contribute
 [framework integration guides]: http://ngraph.nervanasys.com/docs/latest/framework-integration-guides.html
+[release notes]: https://ngraph.nervanasys.com/docs/latest/project/release-notes.html
 [Github issues]: https://github.com/NervanaSystems/ngraph/issues
+[contrib guide]: https://ngraph.nervanasys.com/docs/latest/project/code-contributor-README.html
 [pull request]: https://github.com/NervanaSystems/ngraph/pulls
-[how to import]: http://ngraph.nervanasys.com/docs/latest/howto/import.html
-[ngraph-ecosystem]: doc/sphinx/source/graphics/ngraph-ecosystem.png "nGraph Ecosystem"
+[how to import]: https://ngraph.nervanasys.com/docs/latest/howto/import.html
+[ngraph_wireframes_with_notice]: doc/sphinx/source/graphics/ngraph_wireframes_with_notice.png "nGraph wireframe"
+[ngraph-compiler-stack-readme]: doc/sphinx/source/graphics/ngraph-compiler-stack-readme.png "nGraph Compiler Stack"
 [build-status]: https://travis-ci.org/NervanaSystems/ngraph/branches
 [build-status-badge]: https://travis-ci.org/NervanaSystems/ngraph.svg?branch=master
+[develop-without-lockin]: doc/sphinx/source/graphics/develop-without-lockin.png "Develop on any part of the stack wtihout lockin"
+[Movidius™ Myriad™ 2]:https://www.movidius.com/solutions/vision-processing-unit
+[PlaidML]: https://github.com/plaidml/plaidml
+[Pip package]: https://github.com/NervanaSystems/ngraph-onnx#installing-ngraph-onnx
+[Build from source]: https://github.com/NervanaSystems/ngraph-tf
+[Enable the module]: https://github.com/NervanaSystems/ngraph/blob/mbrookhart/mxnet_tutorial/doc/sphinx/source/shared/mxnet_tutorial.rst
+[Source compile]: https://github.com/NervanaSystems/ngraph-mxnet/blob/master/README.md
+[nGraph-ONNX]: https://github.com/NervanaSystems/ngraph-onnx/blob/master/README.md
+[nGraph-ONNX adaptable]: https://ai.intel.com/adaptable-deep-learning-solutions-with-ngraph-compiler-and-onnx/
+[nGraph for PyTorch developers]: https://ai.intel.com/investing-in-the-pytorch-developer-community
+[Validated workloads]: https://ngraph.nervanasys.com/docs/latest/frameworks/validation-testing.html
+

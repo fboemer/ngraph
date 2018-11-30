@@ -1,18 +1,18 @@
-/*******************************************************************************
-* Copyright 2017-2018 Intel Corporation
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*******************************************************************************/
+//*****************************************************************************
+// Copyright 2017-2018 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
 
 #include <fstream>
 #include <sstream>
@@ -27,6 +27,7 @@
 #include "ngraph/ngraph.hpp"
 #include "ngraph/serializer.hpp"
 #include "util/all_close.hpp"
+#include "util/autodiff/backprop_function.hpp"
 #include "util/ndarray.hpp"
 
 using namespace std;
@@ -133,31 +134,21 @@ TEST(util, trim)
     EXPECT_STREQ("test", trim(" \t test \t ").c_str());
 }
 
-TEST(util, contains)
-{
-    vector<int> v1 = {1, 2, 3, 4, 5, 6};
-
-    EXPECT_TRUE(contains(v1, 1));
-    EXPECT_TRUE(contains(v1, 4));
-    EXPECT_TRUE(contains(v1, 6));
-    EXPECT_FALSE(contains(v1, 8));
-}
-
+#if defined(NGRAPH_INTERPRETER_ENABLE)
 TEST(util, all_close)
 {
-    auto manager = runtime::Manager::get("INTERPRETER");
-    auto backend = manager->allocate_backend();
+    auto backend = runtime::Backend::create("INTERPRETER");
 
     // Create some tensors for input/output
-    auto a = backend->make_primary_tensor_view(element::f32, Shape{2, 3});
-    auto b = backend->make_primary_tensor_view(element::f32, Shape{2, 3});
+    auto a = backend->create_tensor(element::f32, Shape{2, 3});
+    auto b = backend->create_tensor(element::f32, Shape{2, 3});
 
     copy_data(a, test::NDArray<float, 2>({{1, 2, 3}, {3, 4, 5}}).get_vector());
     copy_data(b, test::NDArray<float, 2>({{1, 2, 3}, {3, 4, 5}}).get_vector());
 
     EXPECT_TRUE(ngraph::test::all_close<float>(a, b));
 
-    auto c = backend->make_primary_tensor_view(element::f32, Shape{2, 3});
+    auto c = backend->create_tensor(element::f32, Shape{2, 3});
     copy_data(c, test::NDArray<float, 2>({{1.1f, 2, 3}, {3, 4, 5}}).get_vector());
 
     EXPECT_FALSE(ngraph::test::all_close<float>(c, a, 0, .05f));
@@ -166,6 +157,7 @@ TEST(util, all_close)
     EXPECT_FALSE(ngraph::test::all_close<float>(c, a, .05f, 0));
     EXPECT_TRUE(ngraph::test::all_close<float>(c, a, .11f, 0));
 }
+#endif
 
 TEST(util, traverse_functions)
 {
@@ -174,7 +166,7 @@ TEST(util, traverse_functions)
     auto A = make_shared<op::Parameter>(element::f32, shape);
     auto B = make_shared<op::Parameter>(element::f32, shape);
     auto C = make_shared<op::Parameter>(element::f32, shape);
-    auto f = make_shared<Function>((A + B) * C, op::ParameterVector{A, B, C}, "f");
+    auto f = make_shared<Function>((A + B) * C, ParameterVector{A, B, C}, "f");
 
     // Now make "g(X,Y,Z) = f(X,Y,Z) + f(X,Y,Z)"
     auto X = make_shared<op::Parameter>(element::f32, shape);
@@ -182,7 +174,7 @@ TEST(util, traverse_functions)
     auto Z = make_shared<op::Parameter>(element::f32, shape);
     auto g = make_shared<Function>(make_shared<op::FunctionCall>(f, NodeVector{X, Y, Z}) +
                                        make_shared<op::FunctionCall>(f, NodeVector{X, Y, Z}),
-                                   op::ParameterVector{X, Y, Z},
+                                   ParameterVector{X, Y, Z},
                                    "g");
 
     // Now make "h(X,Y,Z) = g(X,Y,Z) + g(X,Y,Z)"
@@ -191,7 +183,7 @@ TEST(util, traverse_functions)
     auto Z1 = make_shared<op::Parameter>(element::f32, shape);
     auto h = make_shared<Function>(make_shared<op::FunctionCall>(g, NodeVector{X1, Y1, Z1}) +
                                        make_shared<op::FunctionCall>(g, NodeVector{X1, Y1, Z1}),
-                                   op::ParameterVector{X1, Y1, Z1},
+                                   ParameterVector{X1, Y1, Z1},
                                    "h");
 
     vector<Function*> functions;
@@ -213,7 +205,7 @@ public:
     NodeMap node_map;
     std::list<std::shared_ptr<ngraph::Node>> nodes;
     std::shared_ptr<Function> func =
-        make_shared<Function>(AplusBtimesC, op::ParameterVector{A, B, C}, "f");
+        make_shared<Function>(AplusBtimesC, ParameterVector{A, B, C}, "f");
 
     void SetUp()
     {
@@ -291,8 +283,7 @@ TEST(graph_util, clone_multiple_results)
     auto A_add_B = make_shared<op::Add>(A, B);
     auto A_add_B_mul_C = make_shared<op::Multiply>(A_add_B, C);
 
-    auto f =
-        make_shared<Function>(NodeVector{A_add_B, A_add_B_mul_C}, op::ParameterVector{A, B, C});
+    auto f = make_shared<Function>(NodeVector{A_add_B, A_add_B_mul_C}, ParameterVector{A, B, C});
 
     auto copy = clone_function(*f);
 }
@@ -322,4 +313,95 @@ TEST(util, parse_string)
     EXPECT_FLOAT_EQ(numeric_limits<double>::infinity(), parse_string<double>("infinity"));
     EXPECT_FLOAT_EQ(-numeric_limits<double>::infinity(), parse_string<double>("-INFINITY"));
     EXPECT_TRUE(std::isnan(parse_string<double>("NaN")));
+}
+
+TEST(graph_util, get_subgraph_outputs_trivial_tests)
+{
+    auto outputs = ngraph::get_subgraph_outputs(NodeVector{}, NodeVector{});
+    ASSERT_EQ(outputs.size(), 0);
+
+    Shape shape{};
+    auto A = make_shared<op::Parameter>(element::f32, shape);
+    auto absn = make_shared<op::Abs>(A);
+    auto neg_absn = make_shared<op::Negative>(absn);
+    outputs = ngraph::get_subgraph_outputs(NodeVector{A}, NodeVector{});
+    ASSERT_EQ(outputs, (NodeVector{A}));
+
+    outputs = ngraph::get_subgraph_outputs(NodeVector{A}, NodeVector{A});
+    ASSERT_EQ(outputs, (NodeVector{}));
+
+    outputs = ngraph::get_subgraph_outputs(NodeVector{A, absn}, NodeVector{});
+    ASSERT_EQ(outputs, (NodeVector{absn}));
+
+    auto B = make_shared<op::Parameter>(element::f32, shape);
+    auto abs_b = make_shared<op::Abs>(B);
+    auto neg_b = make_shared<op::Negative>(B);
+    auto abs_b_neg = make_shared<op::Negative>(abs_b);
+    outputs = ngraph::get_subgraph_outputs(NodeVector{B, abs_b}, NodeVector{});
+    ASSERT_EQ(outputs, (NodeVector{B, abs_b}));
+
+    outputs = ngraph::get_subgraph_outputs(NodeVector{B, abs_b}, NodeVector{B});
+    ASSERT_EQ(outputs, (NodeVector{abs_b}));
+
+    outputs = ngraph::get_subgraph_outputs(NodeVector{B, abs_b, abs_b_neg}, NodeVector{});
+    ASSERT_EQ(outputs, (NodeVector{B}));
+
+    auto add_b = make_shared<op::Add>(neg_b, abs_b_neg);
+    outputs =
+        ngraph::get_subgraph_outputs(NodeVector{B, abs_b, neg_b, abs_b_neg, add_b}, NodeVector{});
+    ASSERT_EQ(outputs, (NodeVector{}));
+
+    // now add_b uses abs_b_neg
+    outputs = ngraph::get_subgraph_outputs(NodeVector{B, abs_b, abs_b_neg}, NodeVector{});
+    ASSERT_EQ(outputs, (NodeVector{B, abs_b_neg}));
+}
+
+TEST(util, test_fprop_cache)
+{
+    Shape shape{2, 2};
+    auto A = make_shared<op::Parameter>(element::f32, shape);
+    auto B = make_shared<op::Parameter>(element::f32, shape);
+    auto C = make_shared<op::Parameter>(element::f32, shape);
+    auto output = (A + B) * C + A;
+
+    auto f = make_shared<Function>(NodeVector{output}, ParameterVector{A, B, C});
+
+    auto bf = autodiff::backprop_function(f);
+
+    auto fprop_cache = cache_fprop(f, bf);
+
+    EXPECT_EQ(fprop_cache.fprop->get_results().size(), 2);
+    EXPECT_EQ(fprop_cache.bprop->get_parameters().size(), 5);
+}
+
+TEST(graph_util, test_subgraph_topological_sort)
+{
+    Shape shape{2, 2};
+    auto A = make_shared<op::Parameter>(element::f32, shape);
+    auto B = make_shared<op::Parameter>(element::f32, shape);
+    auto C = make_shared<op::Parameter>(element::f32, shape);
+    auto add = A + B;
+    auto mul = C * add;
+    auto result = make_shared<op::Result>(mul);
+    auto sorted = ngraph::subgraph_topological_sort(NodeVector{mul, add, A});
+    std::list<std::shared_ptr<Node>> expected{A, add, mul};
+    ASSERT_EQ(expected, sorted);
+}
+
+TEST(graph_util, test_subgraph_topological_sort_control_dependencies)
+{
+    Shape shape{2, 2};
+    auto A = make_shared<op::Parameter>(element::f32, shape);
+    auto B = make_shared<op::Parameter>(element::f32, shape);
+    auto C = make_shared<op::Parameter>(element::f32, shape);
+    auto D = make_shared<op::Abs>(A);
+    auto E = make_shared<op::Abs>(B);
+    auto add = A + B;
+    add->add_control_dependency(D);
+    add->add_control_dependency(E);
+    auto mul = C * add;
+    auto result = make_shared<op::Result>(mul);
+    auto sorted = ngraph::subgraph_topological_sort(NodeVector{mul, add, A, D}, true);
+    std::list<std::shared_ptr<Node>> expected{A, D, add, mul};
+    ASSERT_EQ(expected, sorted);
 }
